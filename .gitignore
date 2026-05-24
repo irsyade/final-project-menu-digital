@@ -1,0 +1,38 @@
+# General
+.DS_Store
+.vscode/
+.idea/
+*.log
+Thumbs.db
+
+# Laravel
+web_laravel/.env
+web_laravel/.env.backup
+web_laravel/.env.production
+web_laravel/node_modules/
+web_laravel/vendor/
+web_laravel/public/storage
+web_laravel/public/build
+web_laravel/public/hot
+web_laravel/storage/*.key
+web_laravel/storage/framework/cache/data/*
+web_laravel/storage/framework/sessions/*
+web_laravel/storage/framework/testing/*
+web_laravel/storage/framework/views/*
+web_laravel/storage/logs/*
+web_laravel/bootstrap/cache/*
+
+# Flutter
+mobile_flutter/.dart_tool/
+mobile_flutter/.pub-cache/
+mobile_flutter/.pub/
+mobile_flutter/build/
+mobile_flutter/.flutter-plugins
+mobile_flutter/.flutter-plugins-dependencies
+mobile_flutter/android/app/debug
+mobile_flutter/android/app/profile
+mobile_flutter/android/app/release
+mobile_flutter/ios/Flutter/.last_build_id
+mobile_flutter/linux/flutter/
+mobile_flutter/macos/Flutter/
+mobile_flutter/windows/flutter/

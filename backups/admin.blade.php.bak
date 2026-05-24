@@ -1,0 +1,233 @@
+@php
+    $setting = \App\Models\Setting::first() ?? new \App\Models\Setting;
+@endphp
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>@yield('title', 'Dashboard Admin') - {{ $setting->site_name ?? 'Flavora Kitchen' }}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    @if($setting->site_favicon)
+        <link rel="icon" type="image/x-icon" href="{{ Storage::url($setting->site_favicon) }}">
+    @endif
+    <style>
+        body { font-family: 'Outfit', sans-serif; }
+        .sidebar-active { background: rgba(255, 255, 255, 0.1); border-left: 4px solid {{ $setting->primary_color ?? '#f97316' }}; color: white; }
+        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.1); border-radius: 10px; }
+    </style>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brand: '{{ $setting->primary_color ?? "#f97316" }}',
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-gray-50 text-slate-900">
+    <div class="flex min-h-screen overflow-hidden">
+        <!-- Sidebar -->
+        <aside id="sidebar" class="fixed inset-y-0 left-0 z-50 w-72 bg-[#0f172a] text-slate-400 transition-transform duration-300 -translate-x-full lg:translate-x-0 lg:static lg:inset-0 flex flex-col">
+            <div class="p-6 border-b border-white/5">
+                <div class="flex items-center gap-4">
+                    @if($setting->site_logo)
+                        <img src="{{ Storage::url($setting->site_logo) }}" alt="Logo" class="h-8 w-auto">
+                    @else
+                        <div class="bg-brand p-2.5 rounded-xl shadow-lg shadow-brand/20">
+                            <i data-lucide="utensils-crossed" class="w-6 h-6 text-white"></i>
+                        </div>
+                    @endif
+                    <div class="flex flex-col">
+                        <span class="text-white font-black text-xl tracking-tight leading-none">{{ $setting->site_name ?? 'Flavora' }}</span>
+                        <span class="text-[10px] font-bold text-brand uppercase tracking-widest mt-1">Portal Manajemen</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex-1 overflow-y-auto px-4 py-6 space-y-8 custom-scrollbar">
+                <!-- Group: Main -->
+                <div>
+                    <label class="px-4 text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em] mb-4 block">Utama</label>
+                    <nav class="space-y-1">
+                        <a href="/admin" class="flex items-center gap-3 px-4 py-3 rounded-xl transition hover:text-white @if(request()->is('admin')) sidebar-active @endif">
+                            <i data-lucide="layout-grid" class="w-5 h-5"></i>
+                            <span class="font-medium text-sm">Ringkasan Dashboard</span>
+                        </a>
+                    </nav>
+                </div>
+
+                <!-- Group: Menu Management -->
+                <div>
+                    <label class="px-4 text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em] mb-4 block">Menu & Dapur</label>
+                    <nav class="space-y-1">
+                        <a href="/admin/categories" class="flex items-center gap-3 px-4 py-3 rounded-xl transition hover:text-white @if(request()->is('admin/categories')) sidebar-active @endif">
+                            <i data-lucide="layers" class="w-5 h-5"></i>
+                            <span class="font-medium text-sm">Kategori</span>
+                        </a>
+                        <a href="/admin/products" class="flex items-center gap-3 px-4 py-3 rounded-xl transition hover:text-white @if(request()->is('admin/products')) sidebar-active @endif">
+                            <i data-lucide="package" class="w-5 h-5"></i>
+                            <span class="font-medium text-sm">Produk</span>
+                        </a>
+                        @if(Auth::user()->role == 'admin')
+                        <a href="/admin/promos" class="flex items-center gap-3 px-4 py-3 rounded-xl transition hover:text-white @if(request()->is('admin/promos')) sidebar-active @endif">
+                            <i data-lucide="ticket-percent" class="w-5 h-5"></i>
+                            <span class="font-medium text-sm">Promosi</span>
+                        </a>
+                        @endif
+                    </nav>
+                </div>
+
+                <!-- Group: Operations -->
+                <div>
+                    <label class="px-4 text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em] mb-4 block">Operasional</label>
+                    <nav class="space-y-1">
+                        @if(Auth::user()->role == 'admin')
+                        <a href="/admin/tables" class="flex items-center gap-3 px-4 py-3 rounded-xl transition hover:text-white @if(request()->is('admin/tables')) sidebar-active @endif">
+                            <i data-lucide="qr-code" class="w-5 h-5"></i>
+                            <span class="font-medium text-sm">Meja & Kode QR</span>
+                        </a>
+                        @endif
+                        <a href="/admin/orders" class="flex items-center gap-3 px-4 py-3 rounded-xl transition hover:text-white @if(request()->is('admin/orders')) sidebar-active @endif">
+                            <i data-lucide="shopping-cart" class="w-5 h-5"></i>
+                            <span class="font-medium text-sm">Riwayat Pesanan</span>
+                        </a>
+                    </nav>
+                </div>
+
+                @if(Auth::user()->role == 'admin')
+                <!-- Group: Insights -->
+                <div>
+                    <label class="px-4 text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em] mb-4 block">Wawasan</label>
+                    <nav class="space-y-1">
+                        <a href="/admin/reports" class="flex items-center gap-3 px-4 py-3 rounded-xl transition hover:text-white @if(request()->is('admin/reports*')) sidebar-active @endif">
+                            <i data-lucide="bar-chart-big" class="w-5 h-5"></i>
+                            <span class="font-medium text-sm">Laporan Penjualan</span>
+                        </a>
+                    </nav>
+                </div>
+                @endif
+
+                @if(Auth::user()->role == 'admin')
+                <!-- Group: System -->
+                <div>
+                    <label class="px-4 text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em] mb-4 block">Sistem</label>
+                    <nav class="space-y-1">
+                        <a href="/admin/branding" class="flex items-center gap-3 px-4 py-3 rounded-xl transition hover:text-white @if(request()->is('admin/branding')) sidebar-active @endif">
+                            <i data-lucide="palette" class="w-5 h-5"></i>
+                            <span class="font-medium text-sm">Pengaturan Branding</span>
+                        </a>
+                        <a href="/admin/settings" class="flex items-center gap-3 px-4 py-3 rounded-xl transition hover:text-white @if(request()->is('admin/settings')) sidebar-active @endif">
+                            <i data-lucide="settings" class="w-5 h-5"></i>
+                            <span class="font-medium text-sm">Pengaturan Dapur</span>
+                        </a>
+                    </nav>
+                </div>
+                @endif
+            </div>
+
+            <div class="p-6 border-t border-white/5 bg-[#0b1121]">
+                <form method="POST" action="/logout">
+                    @csrf
+                    <button type="submit" class="w-full flex items-center justify-center gap-3 px-4 py-3 rounded-xl bg-red-500/10 text-red-400 font-bold text-sm transition hover:bg-red-500 hover:text-white">
+                        <i data-lucide="power" class="w-4 h-4"></i>
+                        <span>Keluar Manajemen</span>
+                    </button>
+                </form>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="flex-1 flex flex-col min-w-0 overflow-hidden relative">
+            <!-- Header -->
+            <header class="bg-white/80 backdrop-blur-md border-b border-slate-200 px-6 py-4 flex items-center justify-between sticky top-0 z-40">
+                <div class="flex items-center gap-4">
+                    <button id="sidebarToggle" class="lg:hidden p-2 text-slate-500 hover:bg-slate-100 rounded-lg">
+                        <i data-lucide="menu" class="w-6 h-6"></i>
+                    </button>
+                    
+                    <!-- Search Bar (Optional) -->
+                    <div class="hidden md:flex relative group">
+                        <input type="text" placeholder="Cari secara global..." class="bg-gray-100 border-none rounded-xl pl-10 pr-4 py-2 text-sm focus:ring-2 focus:ring-brand focus:w-64 transition-all w-48">
+                        <i data-lucide="search" class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-brand"></i>
+                    </div>
+                </div>
+                
+                <div class="flex items-center gap-4">
+                    <div class="flex items-center gap-3 px-3 py-1.5 bg-gray-50 rounded-xl border border-gray-100">
+                        <div class="text-right">
+                            <p class="text-xs font-bold text-slate-900 leading-none">{{ Auth::user()->name ?? 'Administrator' }}</p>
+                            <span class="text-[9px] font-black text-brand uppercase tracking-tighter">{{ Auth::user()->role == 'admin' ? 'Admin Dapur' : 'Kasir Dapur' }}</span>
+                        </div>
+                        <div class="w-8 h-8 rounded-lg bg-brand text-white flex items-center justify-center font-black text-sm shadow-lg shadow-brand/20">
+                            {{ substr(Auth::user()->name ?? 'A', 0, 1) }}
+                        </div>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Page Content -->
+            <div class="flex-1 overflow-auto bg-[#F8FAFC]">
+                <div class="max-w-7xl mx-auto p-6 lg:p-10">
+                    <!-- Notifications -->
+                    @if(session('success'))
+                        <div class="mb-8 p-4 bg-emerald-50 border border-emerald-100 text-emerald-700 rounded-2xl flex items-center gap-3 shadow-sm animate-in fade-in slide-in-from-top-4 duration-500">
+                            <i data-lucide="check-circle" class="w-5 h-5"></i>
+                            <p class="font-bold text-sm">{{ session('success') }}</p>
+                        </div>
+                    @endif
+
+                    @if($errors->any())
+                        <div class="mb-8 p-4 bg-red-50 border border-red-100 text-red-700 rounded-2xl flex items-center gap-3 shadow-sm">
+                            <i data-lucide="alert-circle" class="w-5 h-5"></i>
+                            <div class="text-sm font-bold">
+                                @foreach($errors->all() as $error)
+                                    <p>{{ $error }}</p>
+                                @endforeach
+                            </div>
+                        </div>
+                    @endif
+
+                    @yield('content')
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Mobile Sidebar Backdrop -->
+    <div id="sidebarBackdrop" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-40 hidden lg:hidden"></div>
+
+    <script>
+        lucide.createIcons();
+
+        const sidebar = document.getElementById('sidebar');
+        const sidebarToggle = document.getElementById('sidebarToggle');
+        const sidebarBackdrop = document.getElementById('sidebarBackdrop');
+
+        function toggleSidebar() {
+            sidebar.classList.toggle('-translate-x-full');
+            sidebarBackdrop.classList.toggle('hidden');
+        }
+
+        sidebarToggle.addEventListener('click', toggleSidebar);
+        sidebarBackdrop.addEventListener('click', toggleSidebar);
+        
+        // Auto-close mobile sidebar on resize
+        window.addEventListener('resize', () => {
+            if (window.innerWidth >= 1024) {
+                sidebar.classList.remove('-translate-x-full');
+                sidebarBackdrop.classList.add('hidden');
+            }
+        });
+    </script>
+</body>
+</html>

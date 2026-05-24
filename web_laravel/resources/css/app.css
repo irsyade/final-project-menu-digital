@@ -1,0 +1,18 @@
+@import 'tailwindcss';
+
+@source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
+@source '../../storage/framework/views/*.php';
+@source '../**/*.blade.php';
+@source '../**/*.js';
+
+@theme {
+    --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
+        'Segoe UI Symbol', 'Noto Color Emoji';
+
+    /* Brand Colors from Claude Prompt */
+    --color-primary: #E8781A;
+    --color-sidebar: #1E1E2E;
+    --color-success: #1D9E75;
+    --color-danger: #E24B4A;
+    --color-background: #F7F6F3;
+}
