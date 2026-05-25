@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:mobile_flutter/models/table.dart';
 import 'package:mobile_flutter/services/api_service.dart';
@@ -22,6 +23,8 @@ class TableController extends GetxController {
       if (response.statusCode == 200) {
         final List data = jsonDecode(response.body);
         tables.value = data.map((e) => TableModel.fromJson(e)).toList();
+      } else {
+        print("Error fetching tables: ${response.statusCode} ${response.body}");
       }
     } catch (e) {
       print("Error fetching tables: $e");
@@ -34,12 +37,15 @@ class TableController extends GetxController {
     isLoading(true);
     try {
       final response = await _apiService.post('/tables', data);
+      final body = jsonDecode(response.body);
       if (response.statusCode == 200 || response.statusCode == 201) {
-        fetchTables();
+        await fetchTables();
         return {"success": true};
       }
-      final errorData = jsonDecode(response.body);
-      return {"success": false, "message": errorData['message'] ?? "Gagal menambah meja"};
+      return {
+        "success": false,
+        "message": body['message'] ?? "Gagal menambah meja (${response.statusCode})"
+      };
     } catch (e) {
       return {"success": false, "message": "Terjadi kesalahan: $e"};
     } finally {
@@ -51,12 +57,15 @@ class TableController extends GetxController {
     isLoading(true);
     try {
       final response = await _apiService.put('/tables/$id', data);
+      final body = jsonDecode(response.body);
       if (response.statusCode == 200) {
-        fetchTables();
+        await fetchTables();
         return {"success": true};
       }
-      final errorData = jsonDecode(response.body);
-      return {"success": false, "message": errorData['message'] ?? "Gagal memperbarui meja"};
+      return {
+        "success": false,
+        "message": body['message'] ?? "Gagal memperbarui meja (${response.statusCode})"
+      };
     } catch (e) {
       return {"success": false, "message": "Terjadi kesalahan: $e"};
     } finally {
@@ -69,9 +78,10 @@ class TableController extends GetxController {
     try {
       final response = await _apiService.delete('/tables/$id');
       if (response.statusCode == 200) {
-        fetchTables();
+        await fetchTables();
         return true;
       }
+      print("Delete failed: ${response.statusCode} ${response.body}");
       return false;
     } catch (e) {
       print("Error deleting table: $e");
@@ -81,16 +91,27 @@ class TableController extends GetxController {
     }
   }
 
-  Future<void> toggleTableStatus(int id) async {
+  /// Toggle aktif/nonaktif meja tanpa mengubah field lain
+  Future<void> toggleTableActive(int id, bool newIsActive) async {
     try {
-      // Assuming there's a toggle endpoint or we just use update
-      final table = tables.firstWhere((t) => t.id == id);
+      final table = tables.firstWhereOrNull((t) => t.id == id);
+      if (table == null) return;
+
       final response = await _apiService.put('/tables/$id', {
-        ...TableModel.toJson(table), // Need toJson in TableModel
-        'is_active': !table.isActive
+        'number': table.number,
+        'name': table.name ?? '',
+        'type': table.type,
+        'capacity': table.capacity,
+        'status': table.status,
+        'is_active': newIsActive,
       });
+
       if (response.statusCode == 200) {
-        fetchTables();
+        await fetchTables();
+      } else {
+        print("Toggle failed: ${response.statusCode} ${response.body}");
+        Get.snackbar("Gagal", "Tidak dapat mengubah status meja",
+            backgroundColor: const Color(0xFFEF4444), colorText: const Color(0xFFFFFFFF));
       }
     } catch (e) {
       print("Error toggling table: $e");

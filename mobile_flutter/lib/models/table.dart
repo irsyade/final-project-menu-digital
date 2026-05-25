@@ -7,6 +7,7 @@ class TableModel {
   final String status;
   final String? customerName;
   final bool isActive;
+  final DateTime? createdAt;
 
   TableModel({
     required this.id,
@@ -17,6 +18,7 @@ class TableModel {
     required this.status,
     this.customerName,
     required this.isActive,
+    this.createdAt,
   });
 
   factory TableModel.fromJson(Map<String, dynamic> json) {
@@ -25,10 +27,18 @@ class TableModel {
       number: json['number']?.toString() ?? '',
       name: json['name'],
       type: json['type'] ?? 'Regular',
-      capacity: json['capacity'] is int ? json['capacity'] : int.tryParse(json['capacity']?.toString() ?? '2') ?? 2,
-      status: json['status'] ?? 'Aktif',
+      capacity: json['capacity'] is int
+          ? json['capacity']
+          : int.tryParse(json['capacity']?.toString() ?? '2') ?? 2,
+      status: json['status'] ?? 'available',
       customerName: json['customer_name'],
-      isActive: json['is_active'] == 1 || json['is_active'] == '1' || json['is_active'] == true || json['is_active'] == 'true',
+      isActive: json['is_active'] == 1 ||
+          json['is_active'] == '1' ||
+          json['is_active'] == true ||
+          json['is_active'] == 'true',
+      createdAt: json['created_at'] != null
+          ? DateTime.tryParse(json['created_at'].toString())
+          : null,
     );
   }
 

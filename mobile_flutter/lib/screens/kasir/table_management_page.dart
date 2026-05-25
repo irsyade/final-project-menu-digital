@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:intl/intl.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:mobile_flutter/constants.dart';
@@ -307,16 +308,7 @@ class _TableManagementPageState extends State<TableManagementPage> {
             children: [
               Switch(
                 value: table.isActive,
-                onChanged: (val) {
-                  controller.updateTable(table.id, {
-                    "number": table.number,
-                    "name": table.name,
-                    "type": table.type,
-                    "capacity": table.capacity,
-                    "status": val ? 'Aktif' : 'Nonaktif',
-                    "is_active": val,
-                  });
-                },
+                onChanged: (val) => controller.toggleTableActive(table.id, val),
                 activeColor: const Color(0xFF10B981),
                 inactiveTrackColor: AppColors.slate200,
               ),
@@ -331,16 +323,22 @@ class _TableManagementPageState extends State<TableManagementPage> {
             ],
           ),
         ),
-        const Padding(
-          padding: EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Text('12 Jan', style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.slate500, fontSize: 12)),
-              Text('2025', style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.slate400, fontSize: 11)),
-            ],
-          ),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+          child: Builder(builder: (context) {
+            final created = table.createdAt;
+            final day = created != null ? DateFormat('d MMM', 'id').format(created) : '-';
+            final year = created != null ? DateFormat('yyyy').format(created) : '';
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(day, style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.slate500, fontSize: 12)),
+                if (year.isNotEmpty)
+                  Text(year, style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.slate400, fontSize: 11)),
+              ],
+            );
+          }),
         ),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),

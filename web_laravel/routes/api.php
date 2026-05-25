@@ -4,6 +4,7 @@ use App\Http\Controllers\Api\FoodController;
 use App\Http\Controllers\Api\CartController;
 use App\Http\Controllers\Api\OrderController;
 use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\TableController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -32,6 +33,12 @@ Route::middleware('auth:sanctum')->group(function () {
     // Cashier/Admin routes
     Route::get('/all-orders', [OrderController::class, 'allOrders']);
     Route::post('/orders/{id}/status', [OrderController::class, 'updateStatus']);
+
+    // Table routes
+    Route::get('/tables', [TableController::class, 'index']);
+    Route::post('/tables', [TableController::class, 'store']);
+    Route::put('/tables/{id}', [TableController::class, 'update']);
+    Route::delete('/tables/{id}', [TableController::class, 'destroy']);
 });
 
 Route::post('/checkout', [OrderController::class, 'store']);
