@@ -20,6 +20,7 @@ class SettingController extends Controller
         
         $data = $request->validate([
             'site_name' => 'required|string|max:255',
+            'address' => 'nullable|string',
             'primary_color' => 'required|string|max:20',
             'site_logo' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg,webp|max:2048',
             'site_favicon' => 'nullable|image|mimes:png,ico,svg|max:512',
@@ -65,5 +66,14 @@ class SettingController extends Controller
     {
         // Add general settings logic here if needed
         return back()->with('success', 'Settings updated successfully!');
+    }
+
+    public function apiSettings()
+    {
+        $setting = Setting::first() ?? new Setting();
+        return response()->json([
+            'site_name' => $setting->site_name ?? 'MenuKu Resto',
+            'address' => $setting->address ?? 'Jl. Digital Menu No. 123',
+        ]);
     }
 }

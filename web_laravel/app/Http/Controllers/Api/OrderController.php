@@ -78,6 +78,7 @@ class OrderController extends Controller
             $order = Order::create([
                 'user_id' => $user ? $user->id : null,
                 'total_price' => $totalPrice,
+                'discount' => 0,
                 'status' => 'processing',
                 'payment_method' => $request->payment_method,
                 'payment_status' => $request->payment_method === 'qris' ? 'paid' : 'unpaid', // Simulation: QRIS auto-paid

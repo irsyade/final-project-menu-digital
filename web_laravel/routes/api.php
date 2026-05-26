@@ -13,6 +13,7 @@ Route::get('/categories', [FoodController::class, 'categories']);
 Route::get('/products', [FoodController::class, 'products']);
 Route::get('/products/popular', [FoodController::class, 'popular']);
 Route::get('/products/search', [FoodController::class, 'products']);
+Route::get('/settings', [\App\Http\Controllers\SettingController::class, 'apiSettings']);
 
 Route::post('/login', [AuthController::class, 'login']);
 Route::post('/register', [AuthController::class, 'register']);

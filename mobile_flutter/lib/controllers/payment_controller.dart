@@ -27,7 +27,10 @@ class PaymentController extends GetxController {
     uangDiterima.value = amount;
   }
 
-  void processPayment() {
+  var lastOrderData = <String, dynamic>{}.obs;
+
+  void processPayment(Map<String, dynamic> data) {
+    lastOrderData.value = data;
     isSuccess.value = true;
   }
 
@@ -35,5 +38,6 @@ class PaymentController extends GetxController {
     isSuccess.value = false;
     uangDiterima.value = 0.0;
     selectedTab.value = 0;
+    lastOrderData.clear();
   }
 }

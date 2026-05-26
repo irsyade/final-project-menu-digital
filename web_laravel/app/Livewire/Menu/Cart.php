@@ -20,6 +20,11 @@ class Cart extends Component
     // Last placed order for status screen
     public ?array $lastOrder = null;
 
+    // Order status polling
+    public string $orderStatus = 'pending';   // pending | processing | ready | completed
+    public string $orderNotification = '';     // shown alert message
+    public string $notificationLevel = '';    // info | success | warning
+
     protected $listeners = ['addToCart'];
 
     public function mount(string $tableName = ''): void
@@ -155,6 +160,7 @@ class Cart extends Component
 
         $order = \App\Models\Order::create([
             'total_price'    => $this->grandTotal(),
+            'discount'       => $this->discount(),
             'status'         => 'pending',
             'payment_method' => 'cash',
             'payment_status' => 'unpaid',
@@ -181,8 +187,51 @@ class Cart extends Component
             'tableName'  => $this->tableName,
         ];
 
+        $this->orderStatus = 'pending';
+        $this->orderNotification = '⏳ Pesanan Anda sedang menunggu konfirmasi dari kasir...';
+        $this->notificationLevel = 'info';
+
         $this->clearCart();
         $this->activeScreen = 'status';
+    }
+
+    // Called every 5s via wire:poll when on status screen
+    public function pollOrderStatus(): void
+    {
+        if (!$this->lastOrder || $this->activeScreen !== 'status') return;
+
+        $order = \App\Models\Order::find($this->lastOrder['id']);
+        if (!$order) return;
+
+        $newStatus = $order->status;
+
+        // Only update notification when status changes
+        if ($newStatus !== $this->orderStatus) {
+            $this->orderStatus = $newStatus;
+
+            match ($newStatus) {
+                'processing' => [
+                    $this->orderNotification = '👨‍🍳 Pesanan Anda sedang diproses oleh dapur!',
+                    $this->notificationLevel = 'warning',
+                ],
+                'ready' => [
+                    $this->orderNotification = '🛵 Pesanan Anda siap dan sedang dalam perjalanan ke meja Anda!',
+                    $this->notificationLevel = 'success',
+                ],
+                'completed' => [
+                    $this->orderNotification = '✅ Pesanan Anda telah selesai. Selamat menikmati!',
+                    $this->notificationLevel = 'success',
+                ],
+                'cancelled' => [
+                    $this->orderNotification = '❌ Maaf, pesanan Anda dibatalkan. Silakan hubungi kasir.',
+                    $this->notificationLevel = 'error',
+                ],
+                default => [
+                    $this->orderNotification = '⏳ Pesanan Anda sedang menunggu konfirmasi dari kasir...',
+                    $this->notificationLevel = 'info',
+                ],
+            };
+        }
     }
 
     public function render()
@@ -192,6 +241,8 @@ class Cart extends Component
             $cartProducts = Product::whereIn('id', array_keys($this->items))->get();
         }
 
-        return view('livewire.menu.cart', compact('cartProducts'));
+        $setting = \App\Models\Setting::first() ?? new \App\Models\Setting();
+
+        return view('livewire.menu.cart', compact('cartProducts', 'setting'));
     }
 }

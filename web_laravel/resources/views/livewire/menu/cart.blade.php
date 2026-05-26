@@ -43,55 +43,69 @@
         {{-- Promo Carousel --}}
         @if(count($promos) > 0)
         <section class="mt-6 px-4" x-data="{ active: 0, timer: null }" x-init="timer = setInterval(() => active = (active + 1) % {{ count($promos) }}, 6000)">
-            <div class="relative overflow-hidden rounded-3xl h-44 shadow-lg bg-slate-100">
+            <div class="relative overflow-hidden rounded-[2rem] h-52 shadow-xl shadow-brand/10 bg-slate-100">
                 @foreach($promos as $index => $promo)
                 @php
                     $gradient = 'linear-gradient(135deg, #FF8C00 0%, #E8781A 100%)';
                     if($promo->promo_type == 'bundling') $gradient = 'linear-gradient(135deg, #1D9E75 0%, #166534 100%)';
                     if($promo->promo_type == 'free_item') $gradient = 'linear-gradient(135deg, #4F46E5 0%, #3730A3 100%)';
+                    
+                    $imageUrl = $promo->image ? (str_starts_with($promo->image, 'http') ? $promo->image : asset('storage/' . $promo->image)) : null;
                 @endphp
                 <div x-show="active === {{ $index }}" 
                      x-transition:enter="transition ease-out duration-500"
                      x-transition:enter-start="opacity-0 translate-x-8"
                      x-transition:enter-end="opacity-100 translate-x-0"
-                     class="absolute inset-0 p-6 text-white flex flex-col justify-between"
+                     class="absolute inset-0 text-white flex flex-col justify-between overflow-hidden"
                      style="background: {{ $gradient }}; display: none;">
                     
-                    <div class="relative z-10 w-full h-full flex flex-col justify-between">
-                        <div>
-                            <div class="flex items-center gap-2 mb-2">
-                                <span class="px-2 py-0.5 bg-white/20 backdrop-blur rounded text-[8px] font-black uppercase tracking-widest">{{ str_replace('_', ' ', $promo->promo_type) }}</span>
-                                <span class="text-[8px] font-black uppercase tracking-[0.2em] opacity-60">PROMO HARI INI</span>
-                            </div>
-                            <h3 class="text-xl font-black leading-tight mb-1 line-clamp-1">{{ $promo->name }}</h3>
-                            <p class="text-[9px] font-medium opacity-80 line-clamp-1">{{ $promo->description }}</p>
+                    {{-- Full Background Image --}}
+                    @if($imageUrl)
+                    <img src="{{ $imageUrl }}" class="absolute inset-0 w-full h-full object-cover opacity-60 mix-blend-overlay">
+                    <div class="absolute inset-0 bg-gradient-to-r from-black/80 via-black/40 to-transparent"></div>
+                    @endif
+
+                    <div class="relative z-10 w-full h-full flex flex-col justify-center p-6 w-3/4">
+                        <div class="inline-flex items-center gap-2 mb-2">
+                            <span class="px-2 py-0.5 bg-white text-slate-900 rounded-[0.25rem] text-[8px] font-black uppercase tracking-widest shadow-sm">{{ str_replace('_', ' ', $promo->promo_type) }}</span>
                         </div>
-
-                        <div class="flex items-end justify-between">
-                            <div class="flex flex-col">
-                                <span class="text-[8px] font-black uppercase tracking-widest opacity-60 mb-0.5">Potongan Hingga</span>
-                                <div class="flex items-baseline gap-0.5">
-                                    @if($promo->type == 'percentage')
-                                    <span class="text-4xl font-black tracking-tighter">{{ $promo->value }}%</span>
-                                    @else
-                                    <span class="text-sm font-black">Rp</span>
-                                    <span class="text-4xl font-black tracking-tighter">{{ number_format($promo->value/1000, 0) }}k</span>
-                                    @endif
-                                </div>
+                        
+                        <h3 class="text-xs font-black uppercase tracking-widest text-white/90 mb-0.5 leading-tight line-clamp-1">{{ $promo->name }}</h3>
+                        
+                        @if($promo->promo_type == 'diskon')
+                            <div class="flex items-baseline gap-1 mb-1">
+                                @if($promo->type == 'percentage')
+                                <span class="text-4xl font-black tracking-tighter">{{ $promo->value }}%</span>
+                                @else
+                                <span class="text-sm font-black text-white/80">Rp</span>
+                                <span class="text-4xl font-black tracking-tighter">{{ number_format($promo->value/1000, 0) }}k</span>
+                                @endif
                             </div>
+                            <p class="text-[10px] font-medium text-white/80 line-clamp-2 mb-3 leading-snug">{{ $promo->description }}</p>
+                            
+                        @elseif($promo->promo_type == 'bundling')
+                            <div class="flex items-baseline gap-1 mb-1">
+                                <span class="text-sm font-black text-white/80">Rp</span>
+                                <span class="text-4xl font-black tracking-tighter">{{ number_format($promo->value/1000, 0) }}k</span>
+                            </div>
+                            <p class="text-[10px] font-bold text-white mb-3 line-clamp-2 leading-snug"><i data-lucide="package" class="w-3 h-3 inline mr-1"></i>{{ $promo->bundling_items ?? $promo->description }}</p>
 
+                        @elseif($promo->promo_type == 'free_item')
+                            <div class="flex items-baseline gap-1 mb-1 mt-1">
+                                <span class="text-2xl font-black tracking-tight text-emerald-300">FREE</span>
+                            </div>
+                            <p class="text-sm font-black text-white mb-1 line-clamp-1"><i data-lucide="gift" class="w-3 h-3 inline mr-1 text-emerald-400"></i>{{ $promo->free_item_name }}</p>
                             @if($promo->min_purchase > 0)
-                            <div class="bg-black/10 backdrop-blur-md px-3 py-1.5 rounded-2xl flex flex-col items-end border border-white/10">
-                                <span class="text-[7px] font-black uppercase tracking-widest opacity-60 leading-none mb-1">Min. Belanja</span>
-                                <span class="text-xs font-black">Rp {{ number_format($promo->min_purchase, 0, ',', '.') }}</span>
-                            </div>
+                            <p class="text-[9px] font-bold text-white/80 mb-2">Min. belanja Rp {{ number_format($promo->min_purchase, 0, ',', '.') }}</p>
                             @endif
+                        @endif
+
+                        <div>
+                            <button wire:click="setScreen('cart')" class="px-5 py-2 bg-white text-slate-900 rounded-xl font-black text-[10px] uppercase tracking-widest shadow-lg hover:scale-105 active:scale-95 transition flex items-center gap-2 w-fit">
+                                ORDER NOW
+                            </button>
                         </div>
                     </div>
-
-                    @if($promo->image)
-                    <img src="{{ str_starts_with($promo->image, 'http') ? $promo->image : asset('storage/' . $promo->image) }}" class="absolute right-0 bottom-0 w-32 h-32 object-cover rounded-tl-[3rem] opacity-35 mix-blend-overlay rotate-12 translate-x-4 translate-y-4">
-                    @endif
                 </div>
                 @endforeach
             </div>
@@ -361,8 +375,58 @@
 
     {{-- ===================== SCREEN: STATUS (Order Placed) ===================== --}}
     @elseif($activeScreen === 'status' && $lastOrder)
-    <div class="flex-1 flex flex-col items-center justify-center p-6 space-y-8 pb-20">
-        
+    <div class="flex-1 flex flex-col items-center justify-center p-6 space-y-8 pb-20"
+         wire:poll.5000ms="pollOrderStatus">
+
+        {{-- Live Order Status Notification Alert --}}
+        @if($orderNotification)
+        <div wire:key="notif-{{ $orderStatus }}"
+             class="w-full rounded-2xl px-5 py-4 flex items-start gap-4 transition-all duration-500 shadow-lg
+                    @if($notificationLevel === 'info') bg-blue-50 border border-blue-200
+                    @elseif($notificationLevel === 'warning') bg-amber-50 border border-amber-300
+                    @elseif($notificationLevel === 'success') bg-emerald-50 border border-emerald-300
+                    @elseif($notificationLevel === 'error') bg-red-50 border border-red-200
+                    @else bg-slate-50 border border-slate-200 @endif"
+             style="animation: slideDown 0.4s ease-out;">
+
+            {{-- Icon dot --}}
+            <span class="mt-0.5 flex-shrink-0 relative">
+                <span class="block w-3 h-3 rounded-full
+                    @if($notificationLevel === 'info') bg-blue-500
+                    @elseif($notificationLevel === 'warning') bg-amber-500
+                    @elseif($notificationLevel === 'success') bg-emerald-500
+                    @elseif($notificationLevel === 'error') bg-red-500
+                    @else bg-slate-400 @endif"></span>
+                @if($notificationLevel !== 'error' && $orderStatus !== 'completed')
+                <span class="absolute inset-0 rounded-full animate-ping opacity-70
+                    @if($notificationLevel === 'info') bg-blue-400
+                    @elseif($notificationLevel === 'warning') bg-amber-400
+                    @elseif($notificationLevel === 'success') bg-emerald-400
+                    @else bg-slate-300 @endif"></span>
+                @endif
+            </span>
+
+            <div class="flex-1">
+                <p class="text-sm font-bold leading-snug
+                    @if($notificationLevel === 'info') text-blue-800
+                    @elseif($notificationLevel === 'warning') text-amber-800
+                    @elseif($notificationLevel === 'success') text-emerald-800
+                    @elseif($notificationLevel === 'error') text-red-800
+                    @else text-slate-700 @endif">
+                    {{ $orderNotification }}
+                </p>
+                <p class="mt-1 text-[10px] font-semibold uppercase tracking-widest
+                    @if($notificationLevel === 'info') text-blue-400
+                    @elseif($notificationLevel === 'warning') text-amber-400
+                    @elseif($notificationLevel === 'success') text-emerald-400
+                    @elseif($notificationLevel === 'error') text-red-400
+                    @else text-slate-400 @endif">
+                    Status: {{ strtoupper($orderStatus) }}
+                </p>
+            </div>
+        </div>
+        @endif
+
         {{-- Success Display --}}
         <div class="text-center space-y-3">
             <div class="w-20 h-20 bg-emerald-50 text-emerald-500 rounded-full flex items-center justify-center mx-auto mb-6 shadow-md shadow-emerald-500/10">
@@ -403,6 +467,31 @@
             </div>
         </div>
 
+        {{-- QRIS Payment Section --}}
+        @if($setting->qris_image)
+        <div class="w-full bg-white border border-slate-100 rounded-[2.5rem] p-6 space-y-4 text-center shadow-sm">
+            <div class="inline-flex items-center justify-center w-12 h-12 bg-blue-50 text-blue-500 rounded-full mb-2">
+                <i data-lucide="qr-code" class="w-6 h-6"></i>
+            </div>
+            <h3 class="text-sm font-black text-slate-900 uppercase tracking-widest">Bayar Pakai QRIS</h3>
+            <p class="text-[10px] font-bold text-slate-400 leading-relaxed max-w-[250px] mx-auto">
+                Scan kode QR di bawah ini untuk melakukan pembayaran. Tunjukkan bukti transfer ke kasir setelah berhasil.
+            </p>
+            
+            <div class="mx-auto w-48 h-48 bg-slate-50 border-2 border-dashed border-slate-200 rounded-3xl p-3 flex items-center justify-center overflow-hidden">
+                <img src="{{ str_starts_with($setting->qris_image, 'http') ? $setting->qris_image : asset('storage/' . $setting->qris_image) }}" class="w-full h-full object-contain rounded-2xl" alt="QRIS Payment">
+            </div>
+
+            @if($setting->bank_name || $setting->account_number)
+            <div class="bg-slate-50 p-4 rounded-2xl mt-4 text-left border border-slate-100">
+                <span class="block text-[9px] font-black uppercase tracking-widest text-slate-400 mb-1">Atau Transfer Rekening</span>
+                <p class="text-xs font-black text-slate-900">{{ $setting->bank_name ?? 'Bank' }} - {{ $setting->account_number ?? '-' }}</p>
+                <p class="text-[10px] font-bold text-slate-500 mt-0.5">a.n {{ $setting->account_name ?? 'MenuKu' }}</p>
+            </div>
+            @endif
+        </div>
+        @endif
+
         {{-- Status Notice --}}
         <div class="bg-brand/5 border border-brand/10 p-5 rounded-[2rem] text-center w-full">
             <p class="text-xs font-bold text-brand leading-relaxed">
@@ -418,4 +507,17 @@
         </button>
     </div>
     @endif
+
+    <style>
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-16px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+    </style>
 </div>

@@ -6,6 +6,9 @@ import 'package:intl/intl.dart';
 import 'package:mobile_flutter/constants.dart';
 import 'package:mobile_flutter/controllers/order_controller.dart';
 import 'package:mobile_flutter/controllers/auth_controller.dart';
+import 'package:pdf/pdf.dart';
+import 'package:printing/printing.dart';
+import 'package:mobile_flutter/utils/pdf_receipt_generator.dart';
 
 class RiwayatPesananPage extends StatelessWidget {
   RiwayatPesananPage({super.key});
@@ -487,7 +490,30 @@ class RiwayatPesananPage extends StatelessWidget {
               width: double.infinity,
               height: 50,
               child: ElevatedButton(
-                onPressed: () => _showReceiptDialog(context, trx),
+                onPressed: () async {
+                  final double total = double.tryParse(trx['total_price'].toString()) ?? 0;
+                  final double subtotal = total / 1.1;
+                  final double tax = total - subtotal;
+                  final double discount = double.tryParse(trx['discount']?.toString() ?? '0') ?? 0;
+                  
+                  final pdfData = await PdfReceiptGenerator.generateReceipt(
+                    orderId: "#TRX${trx['id'].toString().padLeft(3, '0')}",
+                    cashierName: authController.user['name'] ?? 'Admin/Kasir',
+                    date: DateFormat('dd/MM/yy HH:mm').format(DateTime.parse(trx['created_at'])),
+                    customerName: trx['name'] ?? 'Pelanggan',
+                    orderType: trx['address'] ?? 'Dine In',
+                    items: trx['items'] as List,
+                    subtotal: subtotal,
+                    tax: tax,
+                    discount: discount,
+                    total: total,
+                  );
+                  
+                  await Printing.layoutPdf(
+                    onLayout: (PdfPageFormat format) async => pdfData,
+                    name: 'Struk_TRX${trx['id']}',
+                  );
+                },
                 style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary, foregroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)), elevation: 0),
                 child: Text("Cetak Struk", style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
               ),

@@ -6,7 +6,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login - MenuKu</title>
+    <title>Login - {{ $setting->site_name ?? 'MenuKu' }}</title>
+    @if($setting->logo)
+        <link rel="icon" href="{{ str_starts_with($setting->logo, 'http') ? $setting->logo : asset('storage/' . $setting->logo) }}">
+    @endif
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
@@ -108,10 +111,10 @@
             
             if (passwordInput.type === 'password') {
                 passwordInput.type = 'text';
-                eyeIconBtn.innerHTML = '<i data-lucide="eye-off" class="w-5 h-5"></i>';
+                eyeIconBtn.innerHTML = '<i data-lucide="eye" class="w-5 h-5"></i>';
             } else {
                 passwordInput.type = 'password';
-                eyeIconBtn.innerHTML = '<i data-lucide="eye" class="w-5 h-5"></i>';
+                eyeIconBtn.innerHTML = '<i data-lucide="eye-off" class="w-5 h-5"></i>';
             }
             lucide.createIcons();
         }

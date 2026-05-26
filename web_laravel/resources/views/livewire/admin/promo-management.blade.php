@@ -168,7 +168,7 @@
 
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                         {{-- Name --}}
-                        <div class="col-span-2">
+                        <div>
                             <label class="block text-sm font-bold text-slate-700 mb-2 px-1">Nama Promo *</label>
                             <input type="text" wire:model="name" required placeholder="Contoh: Promo Akhir Pekan Ceria"
                                 class="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-brand outline-none font-medium text-sm transition">
@@ -183,46 +183,119 @@
                             @error('code') <p class="text-xs text-red-500 mt-1">{{ $message }}</p> @enderror
                         </div>
 
-                        {{-- Type --}}
-                        <div>
+                        {{-- Description --}}
+                        <div class="col-span-2">
+                            <label class="block text-sm font-bold text-slate-700 mb-2 px-1">Deskripsi Promo</label>
+                            <textarea wire:model="description" rows="2" placeholder="Tuliskan syarat & ketentuan promo di sini..."
+                                class="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-brand outline-none font-medium text-sm transition"></textarea>
+                            @error('description') <p class="text-xs text-red-500 mt-1">{{ $message }}</p> @enderror
+                        </div>
+
+                        {{-- Promo Type (Tipe Promo) --}}
+                        <div class="col-span-2">
                             <label class="block text-sm font-bold text-slate-700 mb-2 px-1">Tipe Promo *</label>
-                            <select wire:model="type" class="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-brand outline-none font-bold text-sm transition">
-                                <option value="percentage">Persentase (%)</option>
-                                <option value="fixed">Nominal Tetap (Rupiah)</option>
-                            </select>
-                            @error('type') <p class="text-xs text-red-500 mt-1">{{ $message }}</p> @enderror
+                            <div class="grid grid-cols-3 gap-4">
+                                <button type="button" wire:click="$set('promo_type', 'diskon')"
+                                    class="py-4 border-2 rounded-2xl font-bold flex flex-col items-center justify-center gap-2 transition @if($promo_type === 'diskon') border-brand bg-brand/5 text-brand @else border-slate-200 bg-white text-slate-400 hover:border-slate-300 @endif">
+                                    <i data-lucide="percent" class="w-6 h-6"></i>
+                                    <span class="text-xs">Diskon</span>
+                                </button>
+                                <button type="button" wire:click="$set('promo_type', 'bundling')"
+                                    class="py-4 border-2 rounded-2xl font-bold flex flex-col items-center justify-center gap-2 transition @if($promo_type === 'bundling') border-blue-500 bg-blue-50 text-blue-600 @else border-slate-200 bg-white text-slate-400 hover:border-slate-300 @endif">
+                                    <i data-lucide="package" class="w-6 h-6"></i>
+                                    <span class="text-xs">Bundling</span>
+                                </button>
+                                <button type="button" wire:click="$set('promo_type', 'free_item')"
+                                    class="py-4 border-2 rounded-2xl font-bold flex flex-col items-center justify-center gap-2 transition @if($promo_type === 'free_item') border-emerald-500 bg-emerald-50 text-emerald-600 @else border-slate-200 bg-white text-slate-400 hover:border-slate-300 @endif">
+                                    <i data-lucide="gift" class="w-6 h-6"></i>
+                                    <span class="text-xs">Free Item</span>
+                                </button>
+                            </div>
                         </div>
 
-                        {{-- Value --}}
-                        <div>
-                            <label class="block text-sm font-bold text-slate-700 mb-2 px-1">Nilai Potongan *</label>
-                            <input type="number" wire:model="value" required placeholder="{{ $type === 'percentage' ? '10' : '15000' }}"
-                                class="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-brand outline-none font-bold text-sm transition">
-                            @error('value') <p class="text-xs text-red-500 mt-1">{{ $message }}</p> @enderror
-                        </div>
+                        {{-- DYNAMIC FIELDS BASED ON PROMO TYPE --}}
+                        <div class="col-span-2 p-6 rounded-[2rem] border @if($promo_type === 'diskon') border-brand/20 bg-brand/5 @elseif($promo_type === 'bundling') border-blue-200 bg-blue-50 @else border-emerald-200 bg-emerald-50 @endif">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                @if($promo_type === 'diskon')
+                                <div class="col-span-2">
+                                    <label class="block text-sm font-bold @if($promo_type === 'diskon') text-brand @elseif($promo_type === 'bundling') text-blue-600 @else text-emerald-600 @endif mb-4">Detail Diskon</label>
+                                    <label class="block text-xs font-bold text-slate-700 mb-2 px-1">Tipe Diskon *</label>
+                                    <div class="flex gap-4">
+                                        <button type="button" wire:click="$set('type', 'percentage')"
+                                            class="flex-1 py-3 border-2 rounded-xl font-bold text-sm transition @if($type === 'percentage') border-brand bg-brand text-white @else border-slate-200 bg-white text-slate-500 @endif">
+                                            % Persentase
+                                        </button>
+                                        <button type="button" wire:click="$set('type', 'fixed')"
+                                            class="flex-1 py-3 border-2 rounded-xl font-bold text-sm transition @if($type === 'fixed') border-brand bg-brand text-white @else border-slate-200 bg-white text-slate-500 @endif">
+                                            Rp Nominal
+                                        </button>
+                                    </div>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-bold text-slate-700 mb-2 px-1">Nilai Diskon *</label>
+                                    <div class="relative">
+                                        @if($type === 'fixed') <div class="absolute left-4 top-4 text-sm font-black text-slate-400">Rp</div> @endif
+                                        <input type="number" wire:model="value" required placeholder="{{ $type === 'percentage' ? '10' : '15000' }}"
+                                            class="w-full py-4 bg-white border border-slate-200 rounded-2xl focus:ring-2 focus:ring-brand outline-none font-black text-sm transition {{ $type === 'fixed' ? 'pl-10 pr-6' : 'px-6' }}">
+                                        @if($type === 'percentage') <div class="absolute right-4 top-4 text-sm font-black text-slate-400">%</div> @endif
+                                    </div>
+                                    @error('value') <p class="text-xs text-red-500 mt-1">{{ $message }}</p> @enderror
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-bold text-slate-700 mb-2 px-1">Min. Pembelian (Opsional)</label>
+                                    <div class="relative">
+                                        <div class="absolute left-4 top-4 text-sm font-black text-slate-400">Rp</div>
+                                        <input type="number" wire:model="min_purchase" placeholder="0"
+                                            class="w-full pl-10 pr-6 py-4 bg-white border border-slate-200 rounded-2xl focus:ring-2 focus:ring-brand outline-none font-bold text-sm transition">
+                                    </div>
+                                    @error('min_purchase') <p class="text-xs text-red-500 mt-1">{{ $message }}</p> @enderror
+                                </div>
 
-                        {{-- Min Purchase --}}
-                        <div>
-                            <label class="block text-sm font-bold text-slate-700 mb-2 px-1">Min. Pembelian (Rupiah)</label>
-                            <input type="number" wire:model="min_purchase" placeholder="0"
-                                class="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-brand outline-none font-bold text-sm transition">
-                            @error('min_purchase') <p class="text-xs text-red-500 mt-1">{{ $message }}</p> @enderror
+                                @elseif($promo_type === 'bundling')
+                                <div class="col-span-2">
+                                    <label class="block text-sm font-bold text-blue-600 mb-4">Detail Bundling</label>
+                                    <label class="block text-sm font-bold text-slate-700 mb-2 px-1">Isi Bundling *</label>
+                                    <textarea wire:model="bundling_items" required rows="2" placeholder="Contoh: 2 Nasi + 2 Lauk + 2 Minuman"
+                                        class="w-full px-6 py-4 bg-white border border-slate-200 rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none font-medium text-sm transition"></textarea>
+                                    @error('bundling_items') <p class="text-xs text-red-500 mt-1">{{ $message }}</p> @enderror
+                                </div>
+                                <div class="col-span-2">
+                                    <label class="block text-sm font-bold text-slate-700 mb-2 px-1">Harga Bundling *</label>
+                                    <div class="relative">
+                                        <div class="absolute left-4 top-4 text-sm font-black text-slate-400">Rp</div>
+                                        <input type="number" wire:model="value" required placeholder="0"
+                                            class="w-full pl-10 pr-6 py-4 bg-white border border-slate-200 rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none font-black text-sm transition">
+                                    </div>
+                                    @error('value') <p class="text-xs text-red-500 mt-1">{{ $message }}</p> @enderror
+                                </div>
+
+                                @elseif($promo_type === 'free_item')
+                                <div class="col-span-2">
+                                    <label class="block text-sm font-bold text-emerald-600 mb-4">Detail Free Item</label>
+                                    <label class="block text-sm font-bold text-slate-700 mb-2 px-1">Item Gratis *</label>
+                                    <input type="text" wire:model="free_item_name" required placeholder="Contoh: Es Teh Manis"
+                                        class="w-full px-6 py-4 bg-white border border-slate-200 rounded-2xl focus:ring-2 focus:ring-emerald-500 outline-none font-medium text-sm transition">
+                                    @error('free_item_name') <p class="text-xs text-red-500 mt-1">{{ $message }}</p> @enderror
+                                </div>
+                                <div class="col-span-2">
+                                    <label class="block text-sm font-bold text-slate-700 mb-2 px-1">Min. Pembelian *</label>
+                                    <div class="relative">
+                                        <div class="absolute left-4 top-4 text-sm font-black text-slate-400">Rp</div>
+                                        <input type="number" wire:model="min_purchase" required placeholder="0"
+                                            class="w-full pl-10 pr-6 py-4 bg-white border border-slate-200 rounded-2xl focus:ring-2 focus:ring-emerald-500 outline-none font-bold text-sm transition">
+                                    </div>
+                                    @error('min_purchase') <p class="text-xs text-red-500 mt-1">{{ $message }}</p> @enderror
+                                </div>
+                                @endif
+                            </div>
                         </div>
 
                         {{-- Quota --}}
-                        <div>
+                        <div class="col-span-2">
                             <label class="block text-sm font-bold text-slate-700 mb-2 px-1">Kuota Kupon</label>
                             <input type="number" wire:model="quota" placeholder="Kosongkan jika tak terbatas"
                                 class="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-brand outline-none font-medium text-sm transition">
                             @error('quota') <p class="text-xs text-red-500 mt-1">{{ $message }}</p> @enderror
-                        </div>
-
-                        {{-- Description --}}
-                        <div class="col-span-2">
-                            <label class="block text-sm font-bold text-slate-700 mb-2 px-1">Deskripsi Promo</label>
-                            <textarea wire:model="description" rows="3" placeholder="Tuliskan syarat & ketentuan promo di sini..."
-                                class="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-brand outline-none font-medium text-sm transition"></textarea>
-                            @error('description') <p class="text-xs text-red-500 mt-1">{{ $message }}</p> @enderror
                         </div>
 
                         {{-- Toggles --}}

@@ -7,8 +7,12 @@ import 'package:mobile_flutter/constants.dart';
 import 'package:mobile_flutter/controllers/pos_cart_controller.dart';
 import 'package:mobile_flutter/controllers/payment_controller.dart';
 import 'package:mobile_flutter/controllers/kasir_controller.dart';
-import 'package:mobile_flutter/controllers/order_controller.dart';
 import 'package:mobile_flutter/controllers/table_controller.dart';
+import 'package:mobile_flutter/controllers/order_controller.dart';
+import 'package:pdf/pdf.dart';
+import 'package:printing/printing.dart';
+import 'package:mobile_flutter/utils/pdf_receipt_generator.dart';
+import 'package:mobile_flutter/controllers/auth_controller.dart';
 
 class PembayaranPage extends StatelessWidget {
   PembayaranPage({super.key});
@@ -368,7 +372,7 @@ class PembayaranPage extends StatelessWidget {
                   );
 
                   if (success != null) {
-                    paymentController.processPayment();
+                    paymentController.processPayment(success as Map<String, dynamic>);
                   } else {
                     Get.snackbar(
                       "Error", 
@@ -503,7 +507,28 @@ class PembayaranPage extends StatelessWidget {
                 children: [
                   Expanded(
                     child: ElevatedButton.icon(
-                      onPressed: () {},
+                      onPressed: () async {
+                        final authController = Get.find<AuthController>();
+                        final order = paymentController.lastOrderData;
+                        
+                        final pdfData = await PdfReceiptGenerator.generateReceipt(
+                          orderId: "#TRX${order['id'].toString().padLeft(3, '0')}",
+                          cashierName: authController.user['name'] ?? 'Admin/Kasir',
+                          date: DateFormat('dd/MM/yy HH:mm').format(DateTime.parse(order['created_at'] ?? DateTime.now().toIso8601String())),
+                          customerName: order['name'] ?? 'Pelanggan',
+                          orderType: order['address'] ?? 'Dine In',
+                          items: order['items'] as List? ?? [],
+                          subtotal: cartController.subtotal,
+                          tax: cartController.tax,
+                          discount: double.tryParse(order['discount']?.toString() ?? '0') ?? 0,
+                          total: cartController.total,
+                        );
+                        
+                        await Printing.layoutPdf(
+                          onLayout: (PdfPageFormat format) async => pdfData,
+                          name: 'Struk_TRX${order['id']}',
+                        );
+                      },
                       icon: const Icon(LucideIcons.printer, size: 18),
                       label: Text("Print Struk", style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
                       style: ElevatedButton.styleFrom(
