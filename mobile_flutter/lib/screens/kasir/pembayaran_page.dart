@@ -511,22 +511,22 @@ class PembayaranPage extends StatelessWidget {
                         final authController = Get.find<AuthController>();
                         final order = paymentController.lastOrderData;
                         
-                        final pdfData = await PdfReceiptGenerator.generateReceipt(
-                          orderId: "#TRX${order['id'].toString().padLeft(3, '0')}",
-                          cashierName: authController.user['name'] ?? 'Admin/Kasir',
-                          date: DateFormat('dd/MM/yy HH:mm').format(DateTime.parse(order['created_at'] ?? DateTime.now().toIso8601String())),
-                          customerName: order['name'] ?? 'Pelanggan',
-                          orderType: order['address'] ?? 'Dine In',
-                          items: order['items'] as List? ?? [],
-                          subtotal: cartController.subtotal,
-                          tax: cartController.tax,
-                          discount: double.tryParse(order['discount']?.toString() ?? '0') ?? 0,
-                          total: cartController.total,
-                        );
-                        
                         await Printing.layoutPdf(
-                          onLayout: (PdfPageFormat format) async => pdfData,
                           name: 'Struk_TRX${order['id']}',
+                          onLayout: (PdfPageFormat format) async {
+                            return await PdfReceiptGenerator.generateReceipt(
+                              orderId: "#TRX${order['id'].toString().padLeft(3, '0')}",
+                              cashierName: authController.user['name'] ?? 'Admin/Kasir',
+                              date: DateFormat('dd/MM/yy HH:mm').format(DateTime.parse(order['created_at'] ?? DateTime.now().toIso8601String())),
+                              customerName: order['name'] ?? 'Pelanggan',
+                              orderType: order['address'] ?? 'Dine In',
+                              items: order['items'] as List? ?? [],
+                              subtotal: cartController.subtotal,
+                              tax: cartController.tax,
+                              discount: double.tryParse(order['discount']?.toString() ?? '0') ?? 0,
+                              total: cartController.total,
+                            );
+                          },
                         );
                       },
                       icon: const Icon(LucideIcons.printer, size: 18),

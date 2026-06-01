@@ -496,22 +496,22 @@ class RiwayatPesananPage extends StatelessWidget {
                   final double tax = total - subtotal;
                   final double discount = double.tryParse(trx['discount']?.toString() ?? '0') ?? 0;
                   
-                  final pdfData = await PdfReceiptGenerator.generateReceipt(
-                    orderId: "#TRX${trx['id'].toString().padLeft(3, '0')}",
-                    cashierName: authController.user['name'] ?? 'Admin/Kasir',
-                    date: DateFormat('dd/MM/yy HH:mm').format(DateTime.parse(trx['created_at'])),
-                    customerName: trx['name'] ?? 'Pelanggan',
-                    orderType: trx['address'] ?? 'Dine In',
-                    items: trx['items'] as List,
-                    subtotal: subtotal,
-                    tax: tax,
-                    discount: discount,
-                    total: total,
-                  );
-                  
                   await Printing.layoutPdf(
-                    onLayout: (PdfPageFormat format) async => pdfData,
                     name: 'Struk_TRX${trx['id']}',
+                    onLayout: (PdfPageFormat format) async {
+                      return await PdfReceiptGenerator.generateReceipt(
+                        orderId: "#TRX${trx['id'].toString().padLeft(3, '0')}",
+                        cashierName: authController.user['name'] ?? 'Admin/Kasir',
+                        date: DateFormat('dd/MM/yy HH:mm').format(DateTime.parse(trx['created_at'])),
+                        customerName: trx['name'] ?? 'Pelanggan',
+                        orderType: trx['address'] ?? 'Dine In',
+                        items: trx['items'] as List,
+                        subtotal: subtotal,
+                        tax: tax,
+                        discount: discount,
+                        total: total,
+                      );
+                    },
                   );
                 },
                 style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary, foregroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)), elevation: 0),

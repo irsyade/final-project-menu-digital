@@ -42,6 +42,10 @@ class OrderController extends GetxController {
         if (allOrders.toString() != data.toString()) {
           allOrders.value = data;
         }
+      } else if (response.statusCode == 401) {
+        // Silently ignore if unauthenticated
+      } else {
+        print("Error fetching all orders: ${response.statusCode}");
       }
     } catch (e) {
       print("Error fetching all orders: $e");
@@ -56,6 +60,10 @@ class OrderController extends GetxController {
       final response = await _apiService.get('/dashboard');
       if (response.statusCode == 200) {
         dashboardData.value = jsonDecode(response.body);
+      } else if (response.statusCode == 401) {
+        // Silently ignore if unauthenticated
+      } else {
+        print("Error fetching dashboard data: ${response.statusCode}");
       }
     } catch (e) {
       print("Error fetching dashboard data: $e");

@@ -23,6 +23,8 @@ class TableController extends GetxController {
       if (response.statusCode == 200) {
         final List data = jsonDecode(response.body);
         tables.value = data.map((e) => TableModel.fromJson(e)).toList();
+      } else if (response.statusCode == 401) {
+        // Silently ignore if unauthenticated (e.g., on app start)
       } else {
         print("Error fetching tables: ${response.statusCode} ${response.body}");
       }

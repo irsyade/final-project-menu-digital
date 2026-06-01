@@ -17,6 +17,13 @@ class TableManagementPage extends StatefulWidget {
 class _TableManagementPageState extends State<TableManagementPage> {
   final TableController controller = Get.find<TableController>();
   final TextEditingController _searchController = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    // Refresh data in case it was skipped during unauthenticated startup
+    controller.fetchTables();
+  }
   
   @override
   Widget build(BuildContext context) {
