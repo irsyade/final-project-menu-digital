@@ -100,11 +100,22 @@
                             @endif
                         @endif
 
-                        <div>
-                            <button wire:click="setScreen('cart')" class="px-5 py-2 bg-white text-slate-900 rounded-xl font-black text-[10px] uppercase tracking-widest shadow-lg hover:scale-105 active:scale-95 transition flex items-center gap-2 w-fit">
+                        @if($promo->promo_type != 'diskon')
+                        <div class="flex items-center gap-2 mt-1">
+                            <button wire:click="applyPromoFromBanner('{{ $promo->code }}')" class="px-5 py-2 bg-white text-slate-900 rounded-xl font-black text-[10px] uppercase tracking-widest shadow-lg hover:scale-105 active:scale-95 transition flex items-center gap-2 w-fit">
                                 ORDER NOW
                             </button>
+                            <span class="px-3 py-2 bg-black/30 backdrop-blur-sm text-white rounded-xl font-black text-[9px] uppercase tracking-widest shadow-sm border border-white/20">
+                                KODE: {{ $promo->code }}
+                            </span>
                         </div>
+                        @else
+                        <div class="mt-1">
+                            <span class="px-5 py-2 bg-white/20 backdrop-blur-sm text-white rounded-xl font-black text-[10px] uppercase tracking-widest shadow-sm flex items-center gap-2 w-fit border border-white/30">
+                                KODE: {{ $promo->code }}
+                            </span>
+                        </div>
+                        @endif
                     </div>
                 </div>
                 @endforeach
@@ -218,7 +229,7 @@
     {{-- Main Cart Scroll --}}
     <div class="flex-1 overflow-y-auto custom-scrollbar p-6 space-y-8 pb-32">
         {{-- Empty Cart State --}}
-        @if(empty($items))
+        @if(empty($items) && (!$appliedPromo || $appliedPromo['promo_type'] === 'diskon') && empty($promoMessage))
         <div class="flex flex-col items-center justify-center py-20 text-slate-200">
             <div class="w-20 h-20 bg-slate-55 rounded-full flex items-center justify-center mb-6">
                 <i data-lucide="shopping-basket" class="w-10 h-10 text-slate-300"></i>
@@ -263,6 +274,35 @@
             <h3 class="text-xs font-black text-slate-500 uppercase tracking-widest px-1">Pesanan Anda</h3>
             
             <div class="divide-y divide-slate-100">
+                @if($appliedPromo && $appliedPromo['promo_type'] === 'bundling')
+                <div class="py-4 flex items-center justify-between gap-4 first:pt-0">
+                    <div class="flex items-center gap-3 flex-1 min-w-0">
+                        <div class="w-16 h-16 rounded-2xl overflow-hidden bg-blue-50 shrink-0 border border-blue-100 flex items-center justify-center text-blue-500">
+                            <i data-lucide="package" class="w-8 h-8"></i>
+                        </div>
+                        <div class="min-w-0 flex-1">
+                            <h4 class="font-black text-slate-900 text-xs line-clamp-1 leading-tight">{{ $appliedPromo['name'] }}</h4>
+                            <p class="text-[10px] font-bold text-slate-400 mt-0.5">{{ $appliedPromo['bundling_items'] }}</p>
+                            <p class="text-xs font-black text-brand mt-1">Rp {{ number_format($appliedPromo['value'], 0, ',', '.') }}</p>
+                        </div>
+                    </div>
+                </div>
+                @endif
+                @if($appliedPromo && $appliedPromo['promo_type'] === 'free_item')
+                <div class="py-4 flex items-center justify-between gap-4 first:pt-0">
+                    <div class="flex items-center gap-3 flex-1 min-w-0">
+                        <div class="w-16 h-16 rounded-2xl overflow-hidden bg-emerald-50 shrink-0 border border-emerald-100 flex items-center justify-center text-emerald-500">
+                            <i data-lucide="gift" class="w-8 h-8"></i>
+                        </div>
+                        <div class="min-w-0 flex-1">
+                            <h4 class="font-black text-slate-900 text-xs line-clamp-1 leading-tight">{{ $appliedPromo['name'] }}</h4>
+                            <p class="text-[10px] font-bold text-slate-400 mt-0.5">Free: {{ $appliedPromo['free_item_name'] }}</p>
+                            <p class="text-xs font-black text-emerald-500 mt-1">Rp 0</p>
+                        </div>
+                    </div>
+                </div>
+                @endif
+
                 @foreach($cartProducts as $product)
                 @php
                     $qty = $items[$product->id] ?? 0;
@@ -357,7 +397,7 @@
     </div>
 
     {{-- Bottom Submit Checkout Bar --}}
-    @if(!empty($items))
+    @if(!empty($items) || ($appliedPromo && $appliedPromo['promo_type'] !== 'diskon'))
     <div class="fixed bottom-0 left-0 right-0 max-w-[430px] mx-auto p-4 bg-white border-t border-slate-100 shadow-[0_-10px_20px_rgba(0,0,0,0.03)] z-40 shrink-0">
         <button
             wire:click="placeOrder()"
@@ -456,6 +496,14 @@
         <div class="w-full space-y-3">
             <h4 class="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Rincian Hidangan</h4>
             <div class="bg-white border border-slate-100 rounded-[2rem] p-5 divide-y divide-slate-50">
+                @if(!empty($lastOrder['promoDesc']))
+                <div class="py-2.5 flex justify-between items-center first:pt-0 last:pb-0">
+                    <span class="text-xs font-bold text-brand w-3/4 leading-tight">
+                        {{ $lastOrder['promoDesc'] }}
+                    </span>
+                    <span class="text-xs font-black text-brand text-right w-1/4">Terpakai</span>
+                </div>
+                @endif
                 @foreach($lastOrder['items'] as $item)
                 <div class="py-2.5 flex justify-between items-center first:pt-0 last:pb-0">
                     <span class="text-xs font-medium text-slate-600">

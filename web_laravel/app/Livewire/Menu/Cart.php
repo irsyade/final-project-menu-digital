@@ -63,6 +63,13 @@ class Cart extends Component
         $this->promoValid   = false;
     }
 
+    public function applyPromoFromBanner(string $code): void
+    {
+        $this->promoCode = $code;
+        $this->applyPromo();
+        $this->setScreen('cart');
+    }
+
     public function applyPromo(): void
     {
         $this->promoMessage = '';
@@ -107,14 +114,23 @@ class Cart extends Component
             $total += $price * $qty;
         }
 
+        // Tambahkan harga bundling ke subtotal
+        if ($this->appliedPromo && $this->appliedPromo['promo_type'] === 'bundling') {
+            $total += $this->appliedPromo['value'];
+        }
+
         return $total;
     }
 
     public function discount(): float
     {
         if (!$this->appliedPromo) return 0;
-
         $promo = $this->appliedPromo;
+
+        if ($promo['promo_type'] === 'bundling' || $promo['promo_type'] === 'free_item') {
+            return 0; // Bundling/Free item tidak dikurangi dari subtotal sebagai diskon nominal
+        }
+
         if ($promo['type'] === 'percentage') {
             return $this->subtotal() * ($promo['value'] / 100);
         }
@@ -138,7 +154,9 @@ class Cart extends Component
 
     public function placeOrder(): void
     {
-        if (empty($this->items)) return;
+        if (empty($this->items) && (!$this->appliedPromo || $this->appliedPromo['promo_type'] === 'diskon')) {
+            return;
+        }
 
         $products = Product::whereIn('id', array_keys($this->items))->get()->keyBy('id');
         $orderItems = [];
@@ -158,6 +176,17 @@ class Cart extends Component
             ];
         }
 
+        $promoDesc = '';
+        if ($this->appliedPromo) {
+            if ($this->appliedPromo['promo_type'] === 'bundling') {
+                $promoDesc = "Promo Bundling: " . $this->appliedPromo['name'] . " (" . $this->appliedPromo['bundling_items'] . ")";
+            } elseif ($this->appliedPromo['promo_type'] === 'free_item') {
+                $promoDesc = "Free Item: " . $this->appliedPromo['free_item_name'];
+            } else {
+                $promoDesc = "Promo Code: " . $this->appliedPromo['code'];
+            }
+        }
+
         $order = \App\Models\Order::create([
             'total_price'    => $this->grandTotal(),
             'discount'       => $this->discount(),
@@ -168,6 +197,7 @@ class Cart extends Component
             'address'        => $this->tableName,
             'phone'          => '-',
             'email'          => '-',
+            'review'         => $promoDesc ?: null,
         ]);
 
         foreach ($orderItems as $item) {
@@ -185,6 +215,7 @@ class Cart extends Component
             'discount'   => $this->discount(),
             'grandTotal' => $this->grandTotal(),
             'tableName'  => $this->tableName,
+            'promoDesc'  => $promoDesc,
         ];
 
         $this->orderStatus = 'pending';

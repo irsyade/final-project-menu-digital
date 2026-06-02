@@ -12,6 +12,7 @@ import 'package:mobile_flutter/screens/kasir/pengaturan_kasir_page.dart';
 import 'package:mobile_flutter/screens/kasir/table_management_page.dart';
 import 'package:mobile_flutter/screens/menu_page.dart';
 import 'package:mobile_flutter/controllers/auth_controller.dart';
+import 'package:mobile_flutter/controllers/settings_controller.dart';
 
 class KasirLayout extends StatelessWidget {
   const KasirLayout({super.key});

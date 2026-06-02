@@ -8,8 +8,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>{{ $restoName }} - Menu Digital</title>
-    @if($setting->logo)
-        <link rel="icon" href="{{ str_starts_with($setting->logo, 'http') ? $setting->logo : asset('storage/' . $setting->logo) }}">
+    @if($setting->site_logo)
+        <link rel="icon" href="{{ str_starts_with($setting->site_logo, 'http') ? $setting->site_logo : asset('storage/' . $setting->site_logo) }}">
     @endif
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>

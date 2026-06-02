@@ -13,10 +13,10 @@
             <p class="text-slate-500 font-medium">Kelola meja dan QR code untuk pemesanan pelanggan</p>
         </div>
         <div class="flex items-center gap-4">
-            <button class="px-6 py-3 bg-white text-slate-700 border border-slate-200 rounded-xl font-bold text-sm transition hover:bg-slate-50 flex items-center gap-2">
+            <a href="{{ route('admin.tables.qr.download-all') }}" class="px-6 py-3 bg-white text-slate-700 border border-slate-200 rounded-xl font-bold text-sm transition hover:bg-slate-50 flex items-center gap-2">
                 <i data-lucide="download" class="w-4 h-4"></i>
                 <span>Download Semua QR</span>
-            </button>
+            </a>
             <button
                 wire:click="openAdd()"
                 class="px-6 py-3 bg-brand text-white rounded-xl font-bold text-sm transition shadow-lg shadow-brand/20 hover:-translate-y-0.5 active:scale-95 flex items-center gap-2">
@@ -113,6 +113,9 @@
                     </div>
 
                     <div class="flex gap-1">
+                        <a href="{{ route('admin.tables.qr.download', $table->id) }}" class="p-2 bg-white hover:bg-slate-100 text-slate-400 hover:text-brand rounded-xl shadow-sm border border-slate-100 transition">
+                            <i data-lucide="download" class="w-4 h-4"></i>
+                        </a>
                         <button wire:click="openEdit({{ $table->id }})" class="p-2 bg-white hover:bg-slate-100 text-slate-400 hover:text-blue-500 rounded-xl shadow-sm border border-slate-100 transition">
                             <i data-lucide="pencil" class="w-4 h-4"></i>
                         </button>

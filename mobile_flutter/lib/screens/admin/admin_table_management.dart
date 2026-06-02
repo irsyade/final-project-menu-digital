@@ -4,6 +4,7 @@ import 'package:lucide_icons/lucide_icons.dart';
 import 'package:mobile_flutter/constants.dart';
 import 'package:mobile_flutter/controllers/table_controller.dart';
 import 'package:mobile_flutter/models/table.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class AdminTableManagementPage extends StatefulWidget {
   const AdminTableManagementPage({super.key});
@@ -250,7 +251,14 @@ class _AdminTableManagementPageState extends State<AdminTableManagementPage> {
                 ),
               ),
               const Spacer(),
-              IconButton(onPressed: () {}, icon: const Icon(LucideIcons.download, size: 16, color: AppColors.slate400), constraints: const BoxConstraints(), padding: EdgeInsets.zero),
+              IconButton(onPressed: () async {
+                final url = Uri.parse('${ApiConstants.baseUrl}/tables/${table.id}/qr/download');
+                if (await canLaunchUrl(url)) {
+                  await launchUrl(url, mode: LaunchMode.externalApplication);
+                } else {
+                  Get.snackbar('Error', 'Tidak dapat mengunduh QR Code');
+                }
+              }, icon: const Icon(LucideIcons.download, size: 16, color: AppColors.slate400), constraints: const BoxConstraints(), padding: EdgeInsets.zero),
               const SizedBox(width: 16),
               IconButton(onPressed: () => _showAddTableDialog(table: table), icon: const Icon(LucideIcons.edit, size: 16, color: AppColors.slate400), constraints: const BoxConstraints(), padding: EdgeInsets.zero),
               const SizedBox(width: 16),
@@ -268,7 +276,14 @@ class _AdminTableManagementPageState extends State<AdminTableManagementPage> {
       child: Column(
         children: [
           OutlinedButton.icon(
-            onPressed: () {},
+            onPressed: () async {
+              final url = Uri.parse('${ApiConstants.baseUrl}/tables/qr/download-all');
+              if (await canLaunchUrl(url)) {
+                await launchUrl(url, mode: LaunchMode.externalApplication);
+              } else {
+                Get.snackbar('Error', 'Tidak dapat mengunduh QR Code');
+              }
+            },
             style: OutlinedButton.styleFrom(
               minimumSize: const Size(double.infinity, 48),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -444,7 +459,14 @@ class _AdminTableManagementPageState extends State<AdminTableManagementPage> {
                 children: [
                   Expanded(
                     child: ElevatedButton.icon(
-                      onPressed: () {},
+                      onPressed: () async {
+                        final url = Uri.parse('${ApiConstants.baseUrl}/tables/${table.id}/qr/download');
+                        if (await canLaunchUrl(url)) {
+                          await launchUrl(url, mode: LaunchMode.externalApplication);
+                        } else {
+                          Get.snackbar('Error', 'Tidak dapat mengunduh QR Code');
+                        }
+                      },
                       style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)), padding: const EdgeInsets.symmetric(vertical: 12), elevation: 0),
                       icon: const Icon(LucideIcons.download, size: 16, color: Colors.white),
                       label: const Text('Download', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 12)),

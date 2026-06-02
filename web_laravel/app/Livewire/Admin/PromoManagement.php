@@ -84,7 +84,7 @@ class PromoManagement extends Component
 
         $imageUrl = $this->existingImage;
         if ($this->photo) {
-            $imageUrl = '/storage/' . $this->photo->store('promos', 'public');
+            $imageUrl = $this->photo->store('promos', 'public');
         }
 
         $data = [

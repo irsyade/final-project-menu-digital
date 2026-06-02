@@ -10,6 +10,7 @@ import 'package:mobile_flutter/screens/admin/admin_promo_page.dart';
 import 'package:mobile_flutter/screens/admin/admin_table_management.dart';
 import 'package:mobile_flutter/screens/admin/admin_report_page.dart';
 import 'package:mobile_flutter/screens/admin/admin_settings_page.dart';
+import 'package:mobile_flutter/controllers/settings_controller.dart';
 
 class AdminLayout extends StatefulWidget {
   const AdminLayout({super.key});
@@ -20,6 +21,7 @@ class AdminLayout extends StatefulWidget {
 
 class _AdminLayoutState extends State<AdminLayout> {
   final AuthController _authController = Get.find<AuthController>();
+  final SettingsController _settingsController = Get.put(SettingsController());
   int _selectedIndex = 0;
 
   final List<Widget> _pages = [

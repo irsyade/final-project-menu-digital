@@ -11,6 +11,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:mobile_flutter/blocs/auth/auth_bloc.dart';
 import 'package:mobile_flutter/blocs/auth/auth_event.dart';
 import 'package:mobile_flutter/blocs/auth/auth_state.dart';
+import 'package:mobile_flutter/controllers/settings_controller.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -22,6 +23,7 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
+  final SettingsController _settingsController = Get.put(SettingsController());
 
   bool _obscurePassword = true;
 

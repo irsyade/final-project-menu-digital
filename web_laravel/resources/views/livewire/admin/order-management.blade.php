@@ -73,8 +73,13 @@
                             </div>
                         </td>
                         <td class="px-6 py-5">
-                            <span class="text-sm text-slate-500 line-clamp-1 max-w-[200px]">
+                            <span class="text-sm text-slate-500 line-clamp-2 max-w-[200px]">
                                 {{ $order->items->map(fn($i) => $i->quantity . 'x ' . ($i->product->name ?? '?'))->join(', ') }}
+                                @if($order->review && str_starts_with($order->review, 'Promo'))
+                                    <br><span class="text-blue-500 font-black text-[10px] uppercase tracking-widest">{{ $order->review }}</span>
+                                @elseif($order->review && str_starts_with($order->review, 'Free'))
+                                    <br><span class="text-emerald-500 font-black text-[10px] uppercase tracking-widest">{{ $order->review }}</span>
+                                @endif
                             </span>
                         </td>
                         <td class="px-6 py-5">

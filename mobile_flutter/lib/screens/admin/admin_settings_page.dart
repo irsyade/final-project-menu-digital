@@ -178,15 +178,29 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> with SingleTicker
                       child: Image.file(_logoImage!, fit: BoxFit.cover, width: double.infinity, height: double.infinity),
                     )
                   else
-                    Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: const [
-                        Icon(LucideIcons.uploadCloud, color: AppColors.primary, size: 28),
-                        SizedBox(height: 4),
-                        Text('Upload Logo', style: TextStyle(fontSize: 10, color: AppColors.primary, fontWeight: FontWeight.bold)),
-                        Text('max 2MB', style: TextStyle(fontSize: 8, color: AppColors.slate400)),
-                      ],
-                    ),
+                    Obx(() {
+                      final logo = _settingsController.settings['site_logo'];
+                      if (logo != null && logo.toString().isNotEmpty) {
+                        return ClipRRect(
+                          borderRadius: BorderRadius.circular(22),
+                          child: Image.network(
+                            '${ApiConstants.baseUrl}/storage/$logo',
+                            fit: BoxFit.cover,
+                            width: double.infinity,
+                            height: double.infinity,
+                          ),
+                        );
+                      }
+                      return Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: const [
+                          Icon(LucideIcons.uploadCloud, color: AppColors.primary, size: 28),
+                          SizedBox(height: 4),
+                          Text('Upload Logo', style: TextStyle(fontSize: 10, color: AppColors.primary, fontWeight: FontWeight.bold)),
+                          Text('max 2MB', style: TextStyle(fontSize: 8, color: AppColors.slate400)),
+                        ],
+                      );
+                    }),
                   Positioned(
                     bottom: -8, right: -8,
                     child: Container(

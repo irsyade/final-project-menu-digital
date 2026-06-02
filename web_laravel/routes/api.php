@@ -18,6 +18,10 @@ Route::get('/settings', [\App\Http\Controllers\SettingController::class, 'apiSet
 Route::post('/login', [AuthController::class, 'login']);
 Route::post('/register', [AuthController::class, 'register']);
 
+// Public QR Download routes for Mobile App (url_launcher)
+Route::get('/tables/qr/download-all', [TableController::class, 'downloadAllQr']);
+Route::get('/tables/{table}/qr/download', [TableController::class, 'downloadQr']);
+
 // Protected routes
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);

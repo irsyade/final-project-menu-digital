@@ -6,6 +6,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:mobile_flutter/constants.dart';
 import 'package:mobile_flutter/controllers/table_controller.dart';
 import 'package:mobile_flutter/models/table.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class TableManagementPage extends StatefulWidget {
   const TableManagementPage({super.key});
@@ -77,7 +78,14 @@ class _TableManagementPageState extends State<TableManagementPage> {
           Row(
             children: [
               OutlinedButton.icon(
-                onPressed: () {},
+                onPressed: () async {
+                  final url = Uri.parse('${ApiConstants.baseUrl}/tables/qr/download-all');
+                  if (await canLaunchUrl(url)) {
+                    await launchUrl(url, mode: LaunchMode.externalApplication);
+                  } else {
+                    Get.snackbar('Error', 'Tidak dapat mengunduh QR Code');
+                  }
+                },
                 style: OutlinedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -283,9 +291,25 @@ class _TableManagementPageState extends State<TableManagementPage> {
                 children: [
                   const Text('Scan menu', style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.slate500, fontSize: 11)),
                   const SizedBox(height: 2),
-                  GestureDetector(
-                    onTap: () => _showQRModal(table),
-                    child: const Text('Lihat QR →', style: TextStyle(fontWeight: FontWeight.w900, color: Color(0xFFF97316), fontSize: 12)),
+                  Row(
+                    children: [
+                      GestureDetector(
+                        onTap: () => _showQRModal(table),
+                        child: const Text('Lihat QR', style: TextStyle(fontWeight: FontWeight.w900, color: Color(0xFFF97316), fontSize: 12)),
+                      ),
+                      const Text(' • ', style: TextStyle(color: AppColors.slate300, fontSize: 12)),
+                      GestureDetector(
+                        onTap: () async {
+                          final url = Uri.parse('${ApiConstants.baseUrl}/tables/${table.id}/qr/download');
+                          if (await canLaunchUrl(url)) {
+                            await launchUrl(url, mode: LaunchMode.externalApplication);
+                          } else {
+                            Get.snackbar('Error', 'Tidak dapat mengunduh QR Code');
+                          }
+                        },
+                        child: const Text('Download', style: TextStyle(fontWeight: FontWeight.w900, color: Color(0xFF10B981), fontSize: 12)),
+                      ),
+                    ],
                   ),
                 ],
               ),
@@ -606,7 +630,14 @@ class _TableManagementPageState extends State<TableManagementPage> {
                 children: [
                   Expanded(
                     child: ElevatedButton.icon(
-                      onPressed: () {},
+                      onPressed: () async {
+                        final url = Uri.parse('${ApiConstants.baseUrl}/tables/${table.id}/qr/download');
+                        if (await canLaunchUrl(url)) {
+                          await launchUrl(url, mode: LaunchMode.externalApplication);
+                        } else {
+                          Get.snackbar('Error', 'Tidak dapat mengunduh QR Code');
+                        }
+                      },
                       style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFF97316), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)), padding: const EdgeInsets.symmetric(vertical: 14), elevation: 0),
                       icon: const Icon(LucideIcons.download, size: 16, color: Colors.white),
                       label: const Text('Download', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 13)),

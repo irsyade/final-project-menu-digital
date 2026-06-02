@@ -49,6 +49,8 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->group(function () {
     Route::resource('products', ProductController::class)->except(['index', 'show']);
     
     // Tables & QR
+    Route::get('/tables/qr/download-all', [TableController::class, 'downloadAllQr'])->name('admin.tables.qr.download-all');
+    Route::get('/tables/{table}/qr/download', [TableController::class, 'downloadQr'])->name('admin.tables.qr.download');
     Route::resource('tables', TableController::class);
     Route::post('/tables/{table}/toggle-status', [TableController::class, 'toggleStatus'])->name('admin.tables.toggle');
     // Promos

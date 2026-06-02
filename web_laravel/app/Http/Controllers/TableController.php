@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Table;
 use Illuminate\Http\Request;
+use Barryvdh\DomPDF\Facade\Pdf;
 
 class TableController extends Controller
 {
@@ -71,5 +72,51 @@ class TableController extends Controller
             return response()->json(['success' => true]);
         }
         return back()->with('success', 'Table removed successfully!');
+    }
+
+    public function downloadAllQr()
+    {
+        $tables = Table::where('is_active', true)->get();
+        if ($tables->isEmpty()) {
+            return back()->with('error', 'Tidak ada meja aktif untuk didownload.');
+        }
+
+        $qrs = [];
+        foreach ($tables as $table) {
+            $url = url('/menu?meja=' . urlencode($table->number));
+            if (class_exists(\SimpleSoftwareIO\QrCode\Facades\QrCode::class)) {
+                $qrSvg = \SimpleSoftwareIO\QrCode\Facades\QrCode::format('svg')->size(150)->generate($url);
+            } else {
+                $qrImage = file_get_contents('https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=' . urlencode($url));
+                $qrSvg = '<img src="data:image/png;base64,' . base64_encode($qrImage) . '" width="150" height="150">';
+            }
+            $qrs[] = [
+                'table' => $table,
+                'svg' => $qrSvg,
+            ];
+        }
+
+        $pdf = Pdf::loadView('admin.tables.qr-pdf-all', compact('qrs'));
+        $pdf->setPaper('A4', 'portrait');
+        
+        return $pdf->download('Semua_QR_Meja.pdf');
+    }
+
+    public function downloadQr(Table $table)
+    {
+        $url = url('/menu?meja=' . urlencode($table->number));
+        
+        if (class_exists(\SimpleSoftwareIO\QrCode\Facades\QrCode::class)) {
+            $qrSvg = \SimpleSoftwareIO\QrCode\Facades\QrCode::format('svg')->size(300)->generate($url);
+        } else {
+            $qrImage = file_get_contents('https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=' . urlencode($url));
+            $qrSvg = '<img src="data:image/png;base64,' . base64_encode($qrImage) . '" width="300" height="300">';
+        }
+
+        $pdf = Pdf::loadView('admin.tables.qr-pdf', compact('table', 'qrSvg'));
+        $pdf->setPaper('A4', 'portrait');
+
+        $filename = 'QR_Meja_' . preg_replace('/[^A-Za-z0-9\-]/', '_', $table->number) . '.pdf';
+        return $pdf->download($filename);
     }
 }
