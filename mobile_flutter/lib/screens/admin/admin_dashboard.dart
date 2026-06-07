@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 import 'dart:convert';
 import 'package:mobile_flutter/services/api_service.dart';
 import 'package:fl_chart/fl_chart.dart';
+import 'package:mobile_flutter/controllers/settings_controller.dart';
 
 class AdminDashboard extends StatefulWidget {
   final Function(int)? onNavigate;
@@ -17,6 +18,7 @@ class AdminDashboard extends StatefulWidget {
 
 class _AdminDashboardState extends State<AdminDashboard> {
   final ApiService _apiService = ApiService();
+  final SettingsController _settingsController = Get.find<SettingsController>();
   String _currentFilter = 'daily';
   bool _isLoading = true;
   Map<String, dynamic> _data = {};
@@ -132,20 +134,24 @@ class _AdminDashboardState extends State<AdminDashboard> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Selamat datang, ${(user != null ? user['name'] : 'Admin') ?? 'Admin'}!',
-                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: AppColors.slate900),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                storeName,
-                style: const TextStyle(fontSize: 13, color: AppColors.slate500, fontWeight: FontWeight.bold),
-              ),
-            ],
-          ),
+          Obx(() {
+            final ownerName = _settingsController.settings['owner_name'] ?? _settingsController.settings['account_name'] ?? user['name'] ?? 'Admin';
+            final siteName = _settingsController.settings['site_name'] ?? storeName;
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Selamat datang, $ownerName',
+                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: AppColors.slate900),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  siteName,
+                  style: const TextStyle(fontSize: 13, color: AppColors.slate500, fontWeight: FontWeight.bold),
+                ),
+              ],
+            );
+          }),
           Text(
             dateStr,
             style: const TextStyle(fontSize: 11, color: AppColors.slate400, fontWeight: FontWeight.bold),

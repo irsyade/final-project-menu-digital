@@ -39,8 +39,8 @@
 
     {{-- Orders Table --}}
     <div class="flex-1 overflow-y-auto custom-scrollbar">
-        <div class="bg-white rounded-[2.5rem] border border-slate-200 shadow-sm overflow-hidden">
-            <table class="w-full text-left">
+        <div class="bg-white rounded-[1.5rem] sm:rounded-[2.5rem] border border-slate-200 shadow-sm overflow-x-auto">
+            <table class="w-full text-left min-w-[800px]">
                 <thead>
                     <tr class="bg-slate-50/50">
                         <th class="px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">No.Pesanan</th>

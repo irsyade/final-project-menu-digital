@@ -7,19 +7,19 @@
 <div class="flex flex-col h-full" x-data="reportManager()" x-init="init()">
     <!-- Header with Export & Filter -->
     <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-6 mb-10">
-        <div class="flex flex-wrap items-center gap-4">
-            <div class="flex p-1 bg-white border border-slate-200 rounded-2xl shadow-sm relative">
+        <div class="flex flex-col sm:flex-row sm:items-center gap-4 w-full lg:w-auto">
+            <div class="flex p-1 bg-white border border-slate-200 rounded-2xl shadow-sm relative overflow-x-auto no-scrollbar max-w-full">
                 <div x-show="isLoading" class="absolute inset-0 bg-white/50 rounded-2xl flex items-center justify-center backdrop-blur-[1px] z-10" style="display: none;">
                     <i data-lucide="loader-2" class="w-5 h-5 text-brand animate-spin"></i>
                 </div>
                 
-                <button @click="fetchData('day')" :class="period === 'day' ? 'bg-brand text-white shadow-lg shadow-brand/20' : 'text-slate-500 hover:text-brand'" class="px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition">Harian</button>
-                <button @click="fetchData('week')" :class="period === 'week' ? 'bg-brand text-white shadow-lg shadow-brand/20' : 'text-slate-500 hover:text-brand'" class="px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition">Mingguan</button>
-                <button @click="fetchData('month')" :class="period === 'month' ? 'bg-brand text-white shadow-lg shadow-brand/20' : 'text-slate-500 hover:text-brand'" class="px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition">Bulanan</button>
-                <button @click="period = 'custom'" :class="period === 'custom' ? 'bg-brand text-white shadow-lg shadow-brand/20' : 'text-slate-500 hover:text-brand'" class="px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition">Kustom</button>
+                <button @click="fetchData('day')" :class="period === 'day' ? 'bg-brand text-white shadow-lg shadow-brand/20' : 'text-slate-500 hover:text-brand'" class="px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition shrink-0">Harian</button>
+                <button @click="fetchData('week')" :class="period === 'week' ? 'bg-brand text-white shadow-lg shadow-brand/20' : 'text-slate-500 hover:text-brand'" class="px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition shrink-0">Mingguan</button>
+                <button @click="fetchData('month')" :class="period === 'month' ? 'bg-brand text-white shadow-lg shadow-brand/20' : 'text-slate-500 hover:text-brand'" class="px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition shrink-0">Bulanan</button>
+                <button @click="period = 'custom'" :class="period === 'custom' ? 'bg-brand text-white shadow-lg shadow-brand/20' : 'text-slate-500 hover:text-brand'" class="px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition shrink-0">Kustom</button>
             </div>
 
-            <div x-show="period === 'custom'" x-transition class="flex items-center gap-2 p-1 bg-white border border-slate-200 rounded-2xl shadow-sm">
+            <div x-show="period === 'custom'" x-transition class="flex items-center gap-2 p-1 bg-white border border-slate-200 rounded-2xl shadow-sm overflow-x-auto no-scrollbar max-w-full">
                 <input type="date" x-model="startDate" class="bg-transparent border-none focus:ring-0 text-xs font-bold text-slate-600 px-3 py-1">
                 <span class="text-slate-300 font-black">-</span>
                 <input type="date" x-model="endDate" class="bg-transparent border-none focus:ring-0 text-xs font-bold text-slate-600 px-3 py-1">
@@ -29,12 +29,12 @@
             </div>
         </div>
 
-        <div class="flex items-center gap-3">
-            <button @click="window.open('/admin/reports/export/csv?period=' + period, '_blank')" class="px-5 py-3.5 border-2 border-brand/20 text-brand hover:bg-brand hover:text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition flex items-center gap-2">
+        <div class="flex items-center gap-3 w-full sm:w-auto justify-start sm:justify-end">
+            <button @click="window.open('/admin/reports/export/csv?period=' + period, '_blank')" class="flex-1 sm:flex-initial px-5 py-3.5 border-2 border-brand/20 text-brand hover:bg-brand hover:text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition flex items-center justify-center gap-2">
                 <i data-lucide="file-text" class="w-4 h-4"></i>
                 Export CSV
             </button>
-            <button @click="window.open('/admin/reports/export/pdf?period=' + period, '_blank')" class="px-5 py-3.5 border-2 border-brand/20 text-brand hover:bg-brand hover:text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition flex items-center gap-2">
+            <button @click="window.open('/admin/reports/export/pdf?period=' + period, '_blank')" class="flex-1 sm:flex-initial px-5 py-3.5 border-2 border-brand/20 text-brand hover:bg-brand hover:text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition flex items-center justify-center gap-2">
                 <i data-lucide="file-type-2" class="w-4 h-4"></i>
                 Export PDF
             </button>
@@ -43,7 +43,7 @@
 
     <!-- Stats Cards Row -->
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
-        <div class="bg-white p-6 rounded-[2rem] border border-slate-200 shadow-sm relative overflow-hidden">
+        <div class="bg-white p-5 sm:p-6 rounded-[1.5rem] sm:rounded-[2rem] border border-slate-200 shadow-sm relative overflow-hidden">
             <span class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Total Pendapatan</span>
             <span class="block text-2xl font-black text-slate-900 leading-none mb-2" x-text="formatRupiah(data.totalRevenue)"></span>
             <div class="flex items-center gap-1 text-emerald-500 text-[10px] font-black">
@@ -52,19 +52,19 @@
             </div>
         </div>
 
-        <div class="bg-white p-6 rounded-[2rem] border border-slate-200 shadow-sm">
+        <div class="bg-white p-5 sm:p-6 rounded-[1.5rem] sm:rounded-[2rem] border border-slate-200 shadow-sm">
             <span class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Jumlah Pesanan</span>
             <span class="block text-3xl font-black text-slate-900 leading-none mb-1" x-text="data.totalOrders"></span>
             <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Transaksi Berhasil</p>
         </div>
 
-        <div class="bg-white p-6 rounded-[2rem] border border-slate-200 shadow-sm">
+        <div class="bg-white p-5 sm:p-6 rounded-[1.5rem] sm:rounded-[2rem] border border-slate-200 shadow-sm">
             <span class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Rata-rata / Hari</span>
             <span class="block text-2xl font-black text-slate-900 leading-none mb-1" x-text="formatRupiah(data.averagePerDay)"></span>
             <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Gross Revenue</p>
         </div>
 
-        <div class="bg-white p-6 rounded-[2rem] border border-slate-200 shadow-sm">
+        <div class="bg-white p-5 sm:p-6 rounded-[1.5rem] sm:rounded-[2rem] border border-slate-200 shadow-sm">
             <span class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Menu Terlaris</span>
             <span class="block text-lg font-black text-slate-900 leading-none mb-1 truncate" x-text="data.topMenuName"></span>
             <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Most Ordered Item</p>
@@ -72,8 +72,8 @@
     </div>
 
     <div class="grid grid-cols-1 lg:grid-cols-12 gap-10">
-        <div class="lg:col-span-8 bg-white p-8 rounded-[2.5rem] border border-slate-200 shadow-sm relative">
-            <div x-show="isLoading" class="absolute inset-0 bg-white/60 rounded-[2.5rem] flex items-center justify-center backdrop-blur-sm z-10" style="display: none;">
+        <div class="lg:col-span-8 bg-white p-4 sm:p-8 rounded-[1.5rem] sm:rounded-[2.5rem] border border-slate-200 shadow-sm relative">
+            <div x-show="isLoading" class="absolute inset-0 bg-white/60 rounded-[1.5rem] sm:rounded-[2.5rem] flex items-center justify-center backdrop-blur-sm z-10" style="display: none;">
                 <i data-lucide="loader-2" class="w-8 h-8 text-brand animate-spin"></i>
             </div>
             
@@ -82,7 +82,7 @@
                 <span class="px-3 py-1 bg-brand/10 text-brand text-[10px] font-black uppercase rounded-lg border border-brand/10" x-text="period === 'day' ? 'Harian (Jam)' : (period === 'week' ? 'Mingguan (Hari)' : 'Bulanan (Tgl)')"></span>
             </div>
             
-            <div class="h-[400px] w-full flex items-center justify-center relative">
+            <div class="h-[300px] sm:h-[400px] w-full flex items-center justify-center relative">
                 <canvas x-ref="canvas"></canvas>
                 <div x-show="data.chartData && data.chartData.every(v => v === 0)" class="absolute inset-0 flex items-center justify-center pointer-events-none" style="display: none;">
                     <p class="text-xs font-bold text-slate-300 uppercase tracking-widest">Tidak Ada Data Penjualan</p>
@@ -90,8 +90,8 @@
             </div>
         </div>
 
-        <div class="lg:col-span-4 bg-white p-8 rounded-[2.5rem] border border-slate-200 shadow-sm relative">
-            <div x-show="isLoading" class="absolute inset-0 bg-white/60 rounded-[2.5rem] flex items-center justify-center backdrop-blur-sm z-10" style="display: none;"></div>
+        <div class="lg:col-span-4 bg-white p-4 sm:p-8 rounded-[1.5rem] sm:rounded-[2.5rem] border border-slate-200 shadow-sm relative">
+            <div x-show="isLoading" class="absolute inset-0 bg-white/60 rounded-[1.5rem] sm:rounded-[2.5rem] flex items-center justify-center backdrop-blur-sm z-10" style="display: none;"></div>
             
             <h3 class="text-xl font-black text-slate-900 tracking-tight mb-8">Top 5 Menu Terlaris</h3>
             

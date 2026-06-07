@@ -23,6 +23,13 @@ class _MenuPageState extends State<MenuPage> {
   final _searchDebounce = Debounce(const Duration(milliseconds: 400));
 
   @override
+  void initState() {
+    super.initState();
+    controller.fetchCategories();
+    controller.fetchProducts();
+  }
+
+  @override
   void dispose() {
     _searchController.dispose();
     _searchDebounce.dispose();

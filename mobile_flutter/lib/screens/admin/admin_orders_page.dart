@@ -376,95 +376,9 @@ class _AdminOrdersPageState extends State<AdminOrdersPage> {
             ],
           ),
           const SizedBox(height: 24),
-          
-          // Action Buttons for Admin Detail Panel
-          if (authController.isKasir) ...[
-            if (trx['status'].toString().toLowerCase() == 'pending')
-              Row(
-                children: [
-                  Expanded(
-                    child: ElevatedButton(
-                      onPressed: () => _updateStatus(trx['id'], 'processing'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.primary,
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      ),
-                      child: const Text('TERIMA', style: TextStyle(fontWeight: FontWeight.w900, color: Colors.white)),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: ElevatedButton(
-                      onPressed: () => _updateStatus(trx['id'], 'cancelled'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.red,
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      ),
-                      child: const Text('TOLAK', style: TextStyle(fontWeight: FontWeight.w900, color: Colors.white)),
-                    ),
-                  ),
-                ],
-              ),
-              
-            if (trx['status'].toString().toLowerCase() == 'processing')
-              Row(
-                children: [
-                  Expanded(
-                    child: ElevatedButton(
-                      onPressed: () => _updateStatus(trx['id'], 'completed'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.success,
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      ),
-                      child: const Text('TANDAI SELESAI', style: TextStyle(fontWeight: FontWeight.w900, color: Colors.white)),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: ElevatedButton(
-                      onPressed: () => _updateStatus(trx['id'], 'cancelled'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.red,
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      ),
-                      child: const Text('TOLAK', style: TextStyle(fontWeight: FontWeight.w900, color: Colors.white)),
-                    ),
-                  ),
-                ],
-              ),
-          ],
         ],
       ),
     );
-  }
-
-  void _updateStatus(int id, String status) async {
-    if (!authController.isKasir) {
-      Get.snackbar(
-        'Gagal', 
-        'Hanya kasir yang dapat mengubah status pesanan.',
-        backgroundColor: Colors.red,
-        colorText: Colors.white,
-      );
-      return;
-    }
-    bool success = await orderController.updateOrderStatus(id, status);
-    if (success) {
-      // Refresh local selection
-      final updatedOrder = orderController.allOrders.firstWhere((o) => o['id'] == id, orElse: () => null);
-      if (updatedOrder != null) selectedTrx.value = updatedOrder;
-      
-      Get.snackbar(
-        'Berhasil', 
-        'Status diperbarui.',
-        backgroundColor: AppColors.success,
-        colorText: Colors.white,
-      );
-    }
   }
 
   Widget _summaryRow(String label, dynamic value) {

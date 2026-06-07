@@ -70,7 +70,6 @@
                 Semua
             </button>
             @foreach($categories as $category)
-            @if($category->products_count > 0)
             <button
                 @click="activeCategory = activeCategory === '{{ $category->id }}' ? '' : '{{ $category->id }}'"
                 class="px-5 py-3 rounded-2xl text-xs font-black uppercase tracking-wider transition shrink-0 border flex items-center gap-2"
@@ -79,7 +78,6 @@
                 <span class="text-[9px] px-1.5 py-0.5 rounded-full"
                       :class="activeCategory == '{{ $category->id }}' ? 'bg-white/20 text-white' : 'bg-slate-200/60 text-slate-500'">{{ $category->products_count }}</span>
             </button>
-            @endif
             @endforeach
         </div>
     </div>

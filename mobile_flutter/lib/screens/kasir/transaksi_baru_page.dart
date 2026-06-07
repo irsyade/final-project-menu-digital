@@ -26,6 +26,13 @@ class _TransaksiBaruPageState extends State<TransaksiBaruPage> {
   final TextEditingController _searchTextController = TextEditingController();
 
   @override
+  void initState() {
+    super.initState();
+    productController.fetchCategories();
+    productController.fetchProducts();
+  }
+
+  @override
   void dispose() {
     _searchDebounce.dispose();
     _searchTextController.dispose();
