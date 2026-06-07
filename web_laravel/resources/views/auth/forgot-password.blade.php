@@ -33,9 +33,7 @@
     <div class="max-w-md w-full">
         <!-- Logo -->
         <div class="flex flex-col items-center mb-10">
-            <div class="w-14 h-14 bg-brand rounded-2xl flex items-center justify-center shadow-xl shadow-brand/30 mb-4">
-                <i data-lucide="utensils-crossed" class="w-8 h-8 text-white"></i>
-            </div>
+            <img src="{{ asset('logo-menuku.png') }}" class="w-14 h-14 object-contain rounded-2xl shadow-xl shadow-brand/10 mb-4">
             <h1 class="text-3xl font-black tracking-tighter">Menu<span class="text-brand">Ku</span></h1>
         </div>
 

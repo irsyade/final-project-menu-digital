@@ -39,36 +39,46 @@
         <div x-show="activeTab === 'profil'" class="bg-white rounded-[2.5rem] border border-slate-200 shadow-sm overflow-hidden animate-in fade-in duration-500">
             <div class="p-10">
                 <h3 class="text-xl font-black text-slate-900 mb-8 tracking-tight">Profil Restoran</h3>
-                <form onsubmit="handleSave(event)" class="space-y-8">
+                <form action="{{ route('admin.settings.update') }}" method="POST" enctype="multipart/form-data" class="space-y-8">
+                    @csrf
                     <div class="flex flex-col md:flex-row gap-10">
                         <div class="w-full md:w-48">
                             <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Logo Resto</label>
                             <div class="relative group cursor-pointer">
+                                <input type="file" name="site_logo" accept="image/*" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer" onchange="previewImage(this, 'logo-preview')">
                                 <div class="w-40 h-40 bg-slate-50 border-2 border-dashed border-slate-200 rounded-[2rem] flex flex-col items-center justify-center gap-2 group-hover:border-brand transition">
-                                    <i data-lucide="camera" class="w-10 h-10 text-slate-300 group-hover:text-brand"></i>
-                                    <span class="text-[9px] font-black text-slate-400 group-hover:text-brand uppercase tracking-widest">Ganti Logo</span>
+                                    @if($setting->site_logo)
+                                        <img id="logo-preview" src="{{ Storage::url($setting->site_logo) }}" alt="Logo" class="w-full h-full object-cover rounded-[2rem]">
+                                    @else
+                                        <i data-lucide="camera" class="w-10 h-10 text-slate-300 group-hover:text-brand"></i>
+                                        <span class="text-[9px] font-black text-slate-400 group-hover:text-brand uppercase tracking-widest">Ganti Logo</span>
+                                    @endif
                                 </div>
                             </div>
                         </div>
                         <div class="flex-1 space-y-6">
                             <div>
                                 <label class="block text-sm font-bold text-slate-700 mb-2 px-1">Nama Restoran</label>
-                                <input type="text" value="MenuKu Resto & Cafe" class="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-brand outline-none font-medium">
+                                <input type="text" name="site_name" value="{{ old('site_name', $setting->site_name ?? '') }}" class="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-brand outline-none font-medium" required>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-bold text-slate-700 mb-2 px-1">Nama Pemilik Restoran</label>
+                                <input type="text" name="owner_name" value="{{ old('owner_name', $setting->owner_name ?? '') }}" class="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-brand outline-none font-medium" placeholder="Contoh: Budi Santoso">
                             </div>
                             <div>
                                 <label class="block text-sm font-bold text-slate-700 mb-2 px-1">Tagline / Deskripsi Singkat</label>
-                                <input type="text" value="Sajian lezat dengan pelayanan digital tercepat." class="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-brand outline-none font-medium">
+                                <input type="text" name="description" value="{{ old('description', $setting->description ?? '') }}" class="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-brand outline-none font-medium">
                             </div>
                         </div>
                     </div>
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div>
                             <label class="block text-sm font-bold text-slate-700 mb-2 px-1">Alamat Lengkap</label>
-                            <textarea rows="3" class="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-brand outline-none font-medium">Jl. Digital Raya No. 404, Jakarta Selatan</textarea>
+                            <textarea name="address" rows="3" class="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-brand outline-none font-medium">{{ old('address', $setting->address ?? '') }}</textarea>
                         </div>
                         <div>
                             <label class="block text-sm font-bold text-slate-700 mb-2 px-1">Nomor Telepon / WhatsApp</label>
-                            <input type="text" value="081234567890" class="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-brand outline-none font-medium">
+                            <input type="text" name="phone" value="{{ old('phone', $setting->phone ?? '') }}" class="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-brand outline-none font-medium">
                         </div>
                     </div>
                     <button type="submit" class="px-10 py-4 bg-brand text-white rounded-2xl font-black text-sm shadow-lg shadow-brand/20 hover:scale-[1.02] active:scale-95 transition">SIMPAN PERUBAHAN</button>
@@ -218,22 +228,37 @@
 </div>
 
 <!-- Success Toast -->
-<div id="successToast" class="fixed bottom-10 right-10 z-[100] bg-emerald-500 text-white px-8 py-4 rounded-2xl shadow-2xl font-black text-sm flex items-center gap-3 hidden animate-in slide-in-from-right duration-300">
+@if(session('success'))
+<div id="successToast" class="fixed bottom-10 right-10 z-[100] bg-emerald-500 text-white px-8 py-4 rounded-2xl shadow-2xl font-black text-sm flex items-center gap-3 animate-in slide-in-from-right duration-300">
     <i data-lucide="check-circle" class="w-5 h-5"></i>
-    <span>Perubahan berhasil disimpan!</span>
+    <span>{{ session('success') }}</span>
 </div>
+@endif
 
 <script src="https://unpkg.com/alpinejs" defer></script>
 <script>
-    function handleSave(e) {
-        e.preventDefault();
-        const toast = document.getElementById('successToast');
-        toast.classList.remove('hidden');
-        setTimeout(() => toast.classList.add('hidden'), 3000);
+    function previewImage(input, previewId) {
+        if (input.files && input.files[0]) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const preview = document.getElementById(previewId);
+                if (preview) {
+                    preview.src = e.target.result;
+                    preview.style.display = 'block';
+                }
+            }
+            reader.readAsDataURL(input.files[0]);
+        }
     }
 
     document.addEventListener('DOMContentLoaded', function() {
         lucide.createIcons();
+        
+        // Auto-hide success toast
+        const toast = document.getElementById('successToast');
+        if (toast) {
+            setTimeout(() => toast.classList.add('hidden'), 3000);
+        }
     });
 </script>
 @endsection

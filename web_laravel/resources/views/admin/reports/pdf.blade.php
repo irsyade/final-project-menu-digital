@@ -1,3 +1,6 @@
+@php
+    $setting = \App\Models\Setting::first() ?? new \App\Models\Setting;
+@endphp
 <!DOCTYPE html>
 <html lang="id">
 <head>
@@ -24,7 +27,13 @@
 <body>
 
     <div class="header">
-        <h1>MenuKu Dashboard</h1>
+        <h1>{{ $setting->site_name ?? 'MenuKu Dashboard' }}</h1>
+        @if($setting->address)
+            <p>{{ $setting->address }}</p>
+        @endif
+        @if($setting->phone)
+            <p>{{ $setting->phone }}</p>
+        @endif
         <p>Laporan Penjualan ({{ ucfirst($period) }})</p>
         <p>Periode: {{ $startDate->format('d M Y') }} - {{ $endDate->format('d M Y') }}</p>
     </div>
@@ -77,7 +86,7 @@
     </table>
 
     <div class="footer">
-        Dicetak secara otomatis oleh sistem MenuKu pada {{ now()->format('d M Y H:i') }}
+        Dicetak secara otomatis oleh sistem {{ $setting->site_name ?? 'MenuKu' }} pada {{ now()->format('d M Y H:i') }}
     </div>
 
 </body>

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:lucide_icons/lucide_icons.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:mobile_flutter/constants.dart';
 import 'package:mobile_flutter/controllers/kasir_controller.dart';
@@ -23,65 +23,59 @@ class KasirLayout extends StatelessWidget {
     final isMobile = MediaQuery.of(context).size.width <= 900;
 
     final AuthController authController = Get.find<AuthController>();
+    final SettingsController settingsController = Get.put(SettingsController());
 
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      drawer: isMobile ? Drawer(
-        child: _buildSidebar(context, controller, isMobile: true),
-      ) : null,
-      body: Row(
-        children: [
-          // Sidebar (Fixed 240px on Tablet/Desktop)
-          if (!isMobile) _buildSidebar(context, controller),
-          
-          // Main Content Area
-          Expanded(
-            child: Column(
-              children: [
-                // Inline Header for Mobile/Tablet Content Area
-                Container(
-                  color: Colors.white,
-                  padding: const EdgeInsets.fromLTRB(24, 16, 16, 16),
-                  child: Row(
-                    children: [
-                      if (isMobile)
-                        Builder(
-                          builder: (context) => IconButton(
-                            icon: const Icon(LucideIcons.menu, color: AppColors.slate900),
-                            onPressed: () => Scaffold.of(context).openDrawer(),
+    return Obx(() {
+      // Trigger rebuild on settings color changes
+      final _ = settingsController.settings.value;
+      
+      return Scaffold(
+        backgroundColor: AppColors.background,
+        drawer: isMobile ? Drawer(
+          child: _buildSidebar(context, controller, isMobile: true),
+        ) : null,
+        body: Row(
+          children: [
+            // Sidebar (Fixed 240px on Tablet/Desktop)
+            if (!isMobile) _buildSidebar(context, controller),
+            
+            // Main Content Area
+            Expanded(
+              child: Column(
+                children: [
+                  // Inline Header for Mobile/Tablet Content Area
+                  Container(
+                    color: Colors.white,
+                    padding: const EdgeInsets.fromLTRB(24, 16, 16, 16),
+                    child: Row(
+                      children: [
+                        if (isMobile)
+                          Builder(
+                            builder: (context) => IconButton(
+                              icon: const Icon(LucideIcons.menu, color: AppColors.slate900),
+                              onPressed: () => Scaffold.of(context).openDrawer(),
+                            ),
                           ),
-                        ),
-                      Expanded(
-                        child: Obx(() {
-                          String name = authController.user['name'] ?? 'Kasir';
-                          return Text(
-                            isMobile ? "POS Resto" : "Kasir: $name", 
+                        Expanded(
+                          child: Text(
+                            isMobile ? "POS Resto" : "Kasir: ${authController.user['name'] ?? 'Kasir'}", 
                             style: GoogleFonts.outfit(fontWeight: FontWeight.w900, color: AppColors.slate900, fontSize: 16),
                             overflow: TextOverflow.ellipsis,
-                          );
-                        }),
-                      ),
-                      const Spacer(),
-                      // Simple notification or user icon
-                      Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(color: AppColors.slate50, borderRadius: BorderRadius.circular(10)),
-                        child: const Icon(LucideIcons.bell, size: 18, color: AppColors.slate400),
-                      ),
-                    ],
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-                Expanded(
-                  child: Obx(() {
-                    return _buildContent(controller.selectedIndex.value);
-                  }),
-                ),
-              ],
+                  Expanded(
+                    child: _buildContent(controller.selectedIndex.value),
+                  ),
+                ],
+              ),
             ),
-          ),
-        ],
-      ),
-    );
+          ],
+        ),
+      );
+    });
   }
 
   Widget _buildSidebar(BuildContext context, KasirController controller, {bool isMobile = false}) {
@@ -122,12 +116,22 @@ class KasirLayout extends StatelessWidget {
       child: Row(
         children: [
           Container(
-            padding: const EdgeInsets.all(8),
+            width: 36,
+            height: 36,
             decoration: BoxDecoration(
-              color: AppColors.primary,
-              borderRadius: BorderRadius.circular(12),
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(10),
             ),
-            child: const Icon(LucideIcons.shoppingCart, color: Colors.white, size: 20),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(10),
+              child: Padding(
+                padding: const EdgeInsets.all(4.0),
+                child: Image.asset(
+                  'assets/icon/app_icon.png',
+                  fit: BoxFit.contain,
+                ),
+              ),
+            ),
           ),
           const SizedBox(width: 12),
           Text(

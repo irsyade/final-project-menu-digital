@@ -41,9 +41,7 @@
         <div class="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
             <!-- Logo -->
             <div class="flex items-center gap-2.5">
-                <div class="w-10 h-10 bg-brand rounded-xl flex items-center justify-center shadow-lg shadow-brand/30">
-                    <i data-lucide="utensils-crossed" class="w-6 h-6 text-white"></i>
-                </div>
+                <img src="{{ asset('logo-menuku.png') }}" class="w-10 h-10 object-contain rounded-xl shadow-lg shadow-brand/10">
                 <span class="text-2xl font-black tracking-tighter">Menu<span class="text-brand">Ku</span></span>
             </div>
 
@@ -55,12 +53,17 @@
             </div>
 
             <!-- Buttons -->
-            <div class="flex items-center gap-4">
+            <div class="flex items-center gap-3 md:gap-4">
                 <a href="/menu" class="hidden md:flex px-6 py-2.5 text-sm font-bold text-brand bg-brand/10 rounded-xl hover:bg-brand/20 transition items-center gap-2">
                     <i data-lucide="menu" class="w-4 h-4"></i> Lihat Menu
                 </a>
+                <a href="/download/app-release.apk" class="flex px-4 py-2 md:px-5 md:py-2.5 text-xs md:text-sm font-bold text-emerald-600 bg-emerald-50 border border-emerald-200 rounded-xl hover:bg-emerald-100 transition items-center gap-2">
+                    <i data-lucide="download" class="w-3.5 h-3.5 md:w-4 md:h-4"></i> 
+                    <span class="hidden sm:inline">Download APK</span>
+                    <span class="sm:hidden">APK</span>
+                </a>
                 <a href="/login" class="px-6 py-2.5 text-sm font-bold text-slate-700 border-2 border-slate-200 rounded-xl hover:bg-slate-50 transition">Login</a>
-                <a href="/login" class="hidden sm:block px-6 py-2.5 text-sm font-black text-white bg-brand rounded-xl shadow-lg shadow-brand/20 hover:opacity-90 transition">Daftar Gratis</a>
+                <a href="/register" class="hidden sm:block px-6 py-2.5 text-sm font-black text-white bg-brand rounded-xl shadow-lg shadow-brand/20 hover:opacity-90 transition">Daftar Gratis</a>
             </div>
         </div>
     </nav>
@@ -211,7 +214,7 @@
                     <a href="/register" class="w-full sm:w-auto px-12 py-5 bg-brand text-white rounded-2xl font-bold text-xl shadow-2xl shadow-brand/20 hover:-translate-y-1 transition duration-300">
                         Daftar Sekarang
                     </a>
-                    <a href="https://wa.me/628123456789" class="w-full sm:w-auto px-12 py-5 bg-white/10 text-white border border-white/20 rounded-2xl font-bold text-xl hover:bg-white/20 transition duration-300 flex items-center justify-center gap-3">
+                    <a href="https://wa.me/6288991034870" class="w-full sm:w-auto px-12 py-5 bg-white/10 text-white border border-white/20 rounded-2xl font-bold text-xl hover:bg-white/20 transition duration-300 flex items-center justify-center gap-3">
                         <i data-lucide="message-circle" class="w-6 h-6"></i>
                         Hubungi Kami
                     </a>
@@ -226,22 +229,20 @@
             <div class="grid grid-cols-1 md:grid-cols-4 gap-16 mb-20">
                 <div class="col-span-1 md:col-span-2">
                     <div class="flex items-center gap-3 mb-8">
-                        <div class="w-10 h-10 bg-brand rounded-xl flex items-center justify-center">
-                            <i data-lucide="utensils-crossed" class="w-6 h-6 text-white"></i>
-                        </div>
+                        <img src="{{ asset('logo-menuku.png') }}" class="w-10 h-10 object-contain rounded-xl shadow-lg">
                         <span class="text-2xl font-bold tracking-tighter italic">Menu<span class="text-brand">Ku</span></span>
                     </div>
                     <p class="text-slate-400 font-light max-w-md mb-10 leading-relaxed">
                         Platform manajemen restoran paling modern di Indonesia. Kami membantu Anda fokus pada rasa, sementara kami mengurus sistemnya.
                     </p>
                     <div class="flex flex-col gap-4 text-slate-400 font-light">
-                        <a href="mailto:hello@menuku.id" class="flex items-center gap-3 hover:text-brand transition">
+                        <a href="mailto:irsyadrama778@gmail.com" class="flex items-center gap-3 hover:text-brand transition">
                             <i data-lucide="mail" class="w-5 h-5"></i>
-                            hello@menuku.id
+                            irsyadrama778@gmail.com
                         </a>
-                        <a href="https://wa.me/628123456789" class="flex items-center gap-3 hover:text-brand transition">
+                        <a href="https://wa.me/6288991034870" class="flex items-center gap-3 hover:text-brand transition">
                             <i data-lucide="phone" class="w-5 h-5"></i>
-                            +62 812-3456-7890 (WhatsApp)
+                            +62 889-9103-4870 (WhatsApp)
                         </a>
                     </div>
                 </div>

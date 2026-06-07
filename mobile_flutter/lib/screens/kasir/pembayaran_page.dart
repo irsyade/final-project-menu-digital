@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:lucide_icons/lucide_icons.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:mobile_flutter/constants.dart';
@@ -9,6 +9,7 @@ import 'package:mobile_flutter/controllers/payment_controller.dart';
 import 'package:mobile_flutter/controllers/kasir_controller.dart';
 import 'package:mobile_flutter/controllers/table_controller.dart';
 import 'package:mobile_flutter/controllers/order_controller.dart';
+import 'package:mobile_flutter/controllers/settings_controller.dart';
 import 'package:pdf/pdf.dart';
 import 'package:printing/printing.dart';
 import 'package:mobile_flutter/utils/pdf_receipt_generator.dart';
@@ -24,6 +25,12 @@ class PembayaranPage extends StatelessWidget {
     final PosCartController cartController = Get.find<PosCartController>();
     final PaymentController paymentController = Get.find<PaymentController>();
     final KasirController kasirController = Get.find<KasirController>();
+    
+    // Ensure SettingsController is initialized and load settings
+    final settingsController = Get.put(SettingsController(), permanent: true);
+    if (settingsController.settings.isEmpty) {
+      settingsController.loadSettings();
+    }
 
     return Obx(() {
       if (paymentController.isSuccess.value) {
@@ -34,51 +41,53 @@ class PembayaranPage extends StatelessWidget {
   }
 
   Widget _buildPaymentLayout(BuildContext context, PosCartController cartController, PaymentController paymentController) {
-    return Container(
-      color: const Color(0xFFF8FAFC), // very light gray background like image
-      child: Center(
-        child: Container(
-          constraints: const BoxConstraints(maxWidth: 500), // constrain width like a mobile view
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Header
-                Text("Pembayaran", style: GoogleFonts.outfit(fontWeight: FontWeight.w900, fontSize: 24, color: AppColors.slate900)),
-                const SizedBox(height: 4),
-                Text("Pilih metode pembayaran.", style: GoogleFonts.outfit(fontSize: 14, color: AppColors.slate500)),
-                const SizedBox(height: 24),
+    return Scaffold(
+      backgroundColor: const Color(0xFFF8FAFC),
+      body: SafeArea(
+        child: Center(
+          child: Container(
+            constraints: const BoxConstraints(maxWidth: 500),
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Header
+                  Text("Pembayaran", style: GoogleFonts.outfit(fontWeight: FontWeight.w900, fontSize: 24, color: AppColors.slate900)),
+                  const SizedBox(height: 4),
+                  Text("Pilih metode pembayaran.", style: GoogleFonts.outfit(fontSize: 14, color: AppColors.slate500)),
+                  const SizedBox(height: 24),
 
-                // Order Accordion
-                _buildOrderAccordion(cartController),
-                const SizedBox(height: 24),
+                  // Order Accordion
+                  _buildOrderAccordion(cartController),
+                  const SizedBox(height: 24),
 
-                // Payment Toggles
-                Row(
-                  children: [
-                    _paymentMethodCard(paymentController, 0, "Tunai", LucideIcons.wallet),
-                    const SizedBox(width: 16),
-                    _paymentMethodCard(paymentController, 1, "QRIS", LucideIcons.qrCode),
-                  ],
-                ),
-                const SizedBox(height: 24),
-
-                // Main Content depending on Tab
-                Obx(() {
-                  bool isQRIS = paymentController.selectedTab.value == 1;
-                  return Column(
+                  // Payment Toggles
+                  Row(
                     children: [
-                      if (isQRIS) ...[
-                        _buildQRSection(),
-                        const SizedBox(height: 24),
-                      ],
-                      // Form section
-                      _buildPaymentForm(cartController, paymentController, isQRIS),
+                      _paymentMethodCard(paymentController, 0, "Tunai", LucideIcons.wallet),
+                      const SizedBox(width: 16),
+                      _paymentMethodCard(paymentController, 1, "QRIS", LucideIcons.qrCode),
                     ],
-                  );
-                }),
-              ],
+                  ),
+                  const SizedBox(height: 24),
+
+                  // Main Content depending on Tab
+                  Obx(() {
+                    bool isQRIS = paymentController.selectedTab.value == 1;
+                    return Column(
+                      children: [
+                        if (isQRIS) ...[
+                          _buildQRSection(),
+                          const SizedBox(height: 24),
+                        ],
+                        // Form section
+                        _buildPaymentForm(cartController, paymentController, isQRIS),
+                      ],
+                    );
+                  }),
+                ],
+              ),
             ),
           ),
         ),
@@ -170,6 +179,8 @@ class PembayaranPage extends StatelessWidget {
   }
 
   Widget _buildQRSection() {
+    final settingsController = Get.find<SettingsController>();
+    
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(24),
@@ -178,21 +189,65 @@ class PembayaranPage extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: AppColors.slate200),
       ),
-      child: Center(
-        child: Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            border: Border.all(color: AppColors.slate300, width: 2),
-            borderRadius: BorderRadius.circular(16),
-          ),
-          child: Image.network(
-            "https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=MENUKU_POS_PAYMENT", 
-            width: 150,
-            height: 150,
-            fit: BoxFit.cover,
-          ),
-        ),
-      ),
+      child: Obx(() {
+        final restaurantName = settingsController.settings['site_name']?.toString() ?? 'POS Restoran';
+        
+        return Column(
+          children: [
+            Text("Scan QRIS untuk membayar", 
+                style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 16, color: AppColors.slate700)),
+            const SizedBox(height: 8),
+            Text(restaurantName, 
+                style: GoogleFonts.outfit(fontSize: 14, color: AppColors.slate500)),
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                border: Border.all(color: AppColors.slate300, width: 2),
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Builder(
+                builder: (context) {
+                  // Check if there's a QRIS image in settings first
+                  final qrisImage = settingsController.settings['qris_image']?.toString();
+                  final paymentData = "${restaurantName.replaceAll(' ', '_').toUpperCase()}_PAYMENT";
+                  
+                  if (qrisImage != null && qrisImage.isNotEmpty) {
+                    // Use stored QRIS image from settings
+                    String imageUrl = qrisImage.startsWith('http') 
+                        ? qrisImage 
+                        : '${ApiConstants.baseUrl.replaceAll('/api', '')}/storage/$qrisImage';
+                        
+                    return Image.network(
+                      imageUrl,
+                      width: 150,
+                      height: 150,
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) {
+                        // Fallback to generated QR if image fails
+                        return Image.network(
+                          "https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=$paymentData", 
+                          width: 150,
+                          height: 150,
+                          fit: BoxFit.cover,
+                        );
+                      },
+                    );
+                  } else {
+                    // Generate QR code with restaurant name
+                    return Image.network(
+                      "https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=$paymentData", 
+                      width: 150,
+                      height: 150,
+                      fit: BoxFit.cover,
+                    );
+                  }
+                },
+              ),
+            ),
+          ],
+        );
+      }),
     );
   }
 
@@ -404,108 +459,119 @@ class PembayaranPage extends StatelessWidget {
 
   // SUCCESS STATE (Image 4)
   Widget _buildSuccessState(BuildContext context, PosCartController cartController, PaymentController paymentController, KasirController kasirController) {
-    return Container(
-      color: const Color(0xFFF8FAFC),
-      child: Center(
-        child: Container(
-          constraints: const BoxConstraints(maxWidth: 500),
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              const SizedBox(height: 24),
-              // Success Icon & Text
-              Container(
-                width: 80, height: 80,
-                decoration: const BoxDecoration(color: Color(0xFF10B981), shape: BoxShape.circle),
-                child: const Icon(LucideIcons.check, color: Colors.white, size: 40),
-              ),
-              const SizedBox(height: 24),
-              Text("Pembayaran Berhasil!", style: GoogleFonts.outfit(fontWeight: FontWeight.w900, fontSize: 24, color: AppColors.slate900)),
-              Text("Terima kasih, pesananmu sedang diproses.", style: GoogleFonts.outfit(color: AppColors.slate500, fontSize: 14)),
-              const SizedBox(height: 32),
-              
-              // Receipt Card
-              Container(
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(16),
-                  boxShadow: [
-                    BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 10, offset: const Offset(0, 4)),
-                  ],
-                ),
-                child: Column(
-                  children: [
-                    // Receipt Header
-                    Padding(
-                      padding: const EdgeInsets.all(24),
-                      child: Column(
-                        children: [
-                          Text("Rayyanza City", style: GoogleFonts.outfit(fontWeight: FontWeight.w900, fontSize: 18)),
-                          Text("Jl. Sudirman No. 12, Jakarta", style: GoogleFonts.outfit(fontSize: 12, color: AppColors.slate500)),
-                          const SizedBox(height: 16),
-                          const Divider(),
-                        ],
-                      ),
-                    ),
-                    
-                    // Receipt Items
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 24),
-                      child: Column(
-                        children: [
-                          ...cartController.cartItems.map((item) => Padding(
-                            padding: const EdgeInsets.only(bottom: 8),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Expanded(child: Text("${item.qty}x ${item.name}", style: GoogleFonts.outfit(fontSize: 13, fontWeight: FontWeight.bold))),
-                                Text(currencyFormatter.format(item.price * item.qty.value), style: GoogleFonts.outfit(fontSize: 13)),
-                              ],
-                            ),
-                          )),
-                          const Divider(height: 32),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text("Subtotal", style: GoogleFonts.outfit(color: AppColors.slate500, fontSize: 13)),
-                              Text(currencyFormatter.format(cartController.subtotal), style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 13)),
-                            ],
-                          ),
-                          const SizedBox(height: 8),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text("Pajak (10%)", style: GoogleFonts.outfit(color: AppColors.slate500, fontSize: 13)),
-                              Text(currencyFormatter.format(cartController.tax), style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 13)),
-                            ],
-                          ),
-                          const SizedBox(height: 16),
-                          Container(
-                            padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(color: AppColors.slate50, borderRadius: BorderRadius.circular(8)),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Text("TOTAL", style: GoogleFonts.outfit(fontWeight: FontWeight.w900, fontSize: 16)),
-                                Text(currencyFormatter.format(cartController.total), style: GoogleFonts.outfit(fontWeight: FontWeight.w900, fontSize: 16, color: AppColors.primary)),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    
-                    const SizedBox(height: 24),
-                  ],
-                ),
-              ),
-              
-              const SizedBox(height: 32),
-              // Buttons
-              Row(
+    final settingsController = Get.find<SettingsController>();
+    
+    return Scaffold(
+      backgroundColor: const Color(0xFFF8FAFC),
+      body: SafeArea(
+        child: Center(
+          child: Container(
+            constraints: const BoxConstraints(maxWidth: 500),
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  Expanded(
+                  const SizedBox(height: 24),
+                  // Success Icon & Text
+                  Container(
+                    width: 80, height: 80,
+                    decoration: const BoxDecoration(color: Color(0xFF10B981), shape: BoxShape.circle),
+                    child: const Icon(LucideIcons.check, color: Colors.white, size: 40),
+                  ),
+                  const SizedBox(height: 24),
+                  Text("Pembayaran Berhasil!", style: GoogleFonts.outfit(fontWeight: FontWeight.w900, fontSize: 24, color: AppColors.slate900)),
+                  Text("Terima kasih, pesananmu sedang diproses.", style: GoogleFonts.outfit(color: AppColors.slate500, fontSize: 14)),
+                  const SizedBox(height: 32),
+                  
+                  // Receipt Card
+                  Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: [
+                        BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 10, offset: const Offset(0, 4)),
+                      ],
+                    ),
+                    child: Column(
+                      children: [
+                        // Receipt Header - Get from Settings
+                        Obx(() {
+                          final restaurantName = settingsController.settings['site_name']?.toString() ?? 'POS Restoran';
+                          final restaurantAddress = settingsController.settings['address']?.toString() ?? 'Jl. Merdeka No. 123, Jakarta';
+                          final restaurantPhone = settingsController.settings['phone']?.toString() ?? '';
+                          
+                          return Padding(
+                            padding: const EdgeInsets.all(24),
+                            child: Column(
+                              children: [
+                                Text(restaurantName, style: GoogleFonts.outfit(fontWeight: FontWeight.w900, fontSize: 18)),
+                                Text(restaurantAddress, style: GoogleFonts.outfit(fontSize: 12, color: AppColors.slate500)),
+                                if (restaurantPhone.isNotEmpty)
+                                  Text(restaurantPhone, style: GoogleFonts.outfit(fontSize: 12, color: AppColors.slate500)),
+                                const SizedBox(height: 16),
+                                const Divider(),
+                              ],
+                            ),
+                          );
+                        }),
+                        
+                        // Receipt Items
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 24),
+                          child: Column(
+                            children: [
+                              ...cartController.cartItems.map((item) => Padding(
+                                padding: const EdgeInsets.only(bottom: 8),
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Expanded(child: Text("${item.qty}x ${item.name}", style: GoogleFonts.outfit(fontSize: 13, fontWeight: FontWeight.bold))),
+                                    Text(currencyFormatter.format(item.price * item.qty.value), style: GoogleFonts.outfit(fontSize: 13)),
+                                  ],
+                                ),
+                              )),
+                              const Divider(height: 32),
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text("Subtotal", style: GoogleFonts.outfit(color: AppColors.slate500, fontSize: 13)),
+                                  Text(currencyFormatter.format(cartController.subtotal), style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 13)),
+                                ],
+                              ),
+                              const SizedBox(height: 8),
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text("Pajak (10%)", style: GoogleFonts.outfit(color: AppColors.slate500, fontSize: 13)),
+                                  Text(currencyFormatter.format(cartController.tax), style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 13)),
+                                ],
+                              ),
+                              const SizedBox(height: 16),
+                              Container(
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(color: AppColors.slate50, borderRadius: BorderRadius.circular(8)),
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Text("TOTAL", style: GoogleFonts.outfit(fontWeight: FontWeight.w900, fontSize: 16)),
+                                    Text(currencyFormatter.format(cartController.total), style: GoogleFonts.outfit(fontWeight: FontWeight.w900, fontSize: 16, color: AppColors.primary)),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        
+                        const SizedBox(height: 24),
+                      ],
+                    ),
+                  ),
+                  
+                  const SizedBox(height: 32),
+                  // Buttons - Remove WhatsApp, keep only Print and Back to Menu
+                  SizedBox(
+                    width: double.infinity,
                     child: ElevatedButton.icon(
                       onPressed: () async {
                         final authController = Get.find<AuthController>();
@@ -539,41 +605,27 @@ class PembayaranPage extends StatelessWidget {
                       ),
                     ),
                   ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      onPressed: () {},
-                      icon: const Icon(LucideIcons.messageCircle, size: 18),
-                      label: Text("Kirim WhatsApp", style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: const Color(0xFF1E293B),
-                        side: const BorderSide(color: Color(0xFFE2E8F0)), // Slate 200
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: () {
+                        cartController.clearCart();
+                        paymentController.resetPayment();
+                        kasirController.changeIndex(0);
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                        foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(vertical: 16),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                       ),
+                      child: Text("Kembali ke Menu Awal", style: GoogleFonts.outfit(fontWeight: FontWeight.w900, fontSize: 16)),
                     ),
                   ),
                 ],
               ),
-              const SizedBox(height: 12),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: () {
-                    cartController.clearCart();
-                    paymentController.resetPayment();
-                    kasirController.changeIndex(0);
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  ),
-                  child: Text("Kembali ke Menu Awal", style: GoogleFonts.outfit(fontWeight: FontWeight.w900, fontSize: 16)),
-                ),
-              ),
-            ],
+            ),
           ),
         ),
       ),

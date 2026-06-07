@@ -19,7 +19,9 @@
                     <h1 class="font-black text-slate-900 text-sm leading-tight">{{ $restoName }}</h1>
                     <div class="flex items-center gap-1">
                         <div class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                        <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest">{{ $tableName ?: 'Dine In' }}</span>
+                        <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                            {{ $tableName ?: 'Dine In' }}
+                        </span>
                     </div>
                 </div>
             </div>
@@ -42,13 +44,49 @@
     <div class="flex-1 overflow-y-auto custom-scrollbar pb-32">
         {{-- Promo Carousel --}}
         @if(count($promos) > 0)
-        <section class="mt-6 px-4" x-data="{ active: 0, timer: null }" x-init="timer = setInterval(() => active = (active + 1) % {{ count($promos) }}, 6000)">
-            <div class="relative overflow-hidden rounded-[2rem] h-52 shadow-xl shadow-brand/10 bg-slate-100">
+        <section class="mt-6 px-4" 
+                 x-data="{ 
+                     active: 0, 
+                     timer: null, 
+                     touchStartX: 0, 
+                     touchEndX: 0, 
+                     count: {{ count($promos) }},
+                     startTimer() {
+                         if (this.timer) clearInterval(this.timer);
+                         this.timer = setInterval(() => {
+                             this.next();
+                         }, 3000);
+                     },
+                     next() {
+                         this.active = (this.active + 1) % this.count;
+                     },
+                     prev() {
+                         this.active = (this.active - 1 + this.count) % this.count;
+                     },
+                     handleTouchStart(e) {
+                         this.touchStartX = e.touches[0].clientX;
+                     },
+                     handleTouchEnd(e) {
+                         this.touchEndX = e.changedTouches[0].clientX;
+                         const diff = this.touchStartX - this.touchEndX;
+                         if (Math.abs(diff) > 50) {
+                             if (diff > 0) {
+                                 this.next();
+                             } else {
+                                 this.prev();
+                             }
+                             this.startTimer();
+                         }
+                     }
+                 }" 
+                 x-init="startTimer()">
+            <div class="relative overflow-hidden rounded-[2rem] h-52 shadow-xl shadow-brand/10 bg-slate-100"
+                 @touchstart="handleTouchStart($event)"
+                 @touchend="handleTouchEnd($event)">
                 @foreach($promos as $index => $promo)
                 @php
                     $gradient = 'linear-gradient(135deg, #FF8C00 0%, #E8781A 100%)';
                     if($promo->promo_type == 'bundling') $gradient = 'linear-gradient(135deg, #1D9E75 0%, #166534 100%)';
-                    if($promo->promo_type == 'free_item') $gradient = 'linear-gradient(135deg, #4F46E5 0%, #3730A3 100%)';
                     
                     $imageUrl = $promo->image ? (str_starts_with($promo->image, 'http') ? $promo->image : asset('storage/' . $promo->image)) : null;
                 @endphp
@@ -90,32 +128,13 @@
                             </div>
                             <p class="text-[10px] font-bold text-white mb-3 line-clamp-2 leading-snug"><i data-lucide="package" class="w-3 h-3 inline mr-1"></i>{{ $promo->bundling_items ?? $promo->description }}</p>
 
-                        @elseif($promo->promo_type == 'free_item')
-                            <div class="flex items-baseline gap-1 mb-1 mt-1">
-                                <span class="text-2xl font-black tracking-tight text-emerald-300">FREE</span>
-                            </div>
-                            <p class="text-sm font-black text-white mb-1 line-clamp-1"><i data-lucide="gift" class="w-3 h-3 inline mr-1 text-emerald-400"></i>{{ $promo->free_item_name }}</p>
-                            @if($promo->min_purchase > 0)
-                            <p class="text-[9px] font-bold text-white/80 mb-2">Min. belanja Rp {{ number_format($promo->min_purchase, 0, ',', '.') }}</p>
-                            @endif
                         @endif
 
-                        @if($promo->promo_type != 'diskon')
-                        <div class="flex items-center gap-2 mt-1">
-                            <button wire:click="applyPromoFromBanner('{{ $promo->code }}')" class="px-5 py-2 bg-white text-slate-900 rounded-xl font-black text-[10px] uppercase tracking-widest shadow-lg hover:scale-105 active:scale-95 transition flex items-center gap-2 w-fit">
-                                ORDER NOW
-                            </button>
-                            <span class="px-3 py-2 bg-black/30 backdrop-blur-sm text-white rounded-xl font-black text-[9px] uppercase tracking-widest shadow-sm border border-white/20">
-                                KODE: {{ $promo->code }}
-                            </span>
-                        </div>
-                        @else
                         <div class="mt-1">
                             <span class="px-5 py-2 bg-white/20 backdrop-blur-sm text-white rounded-xl font-black text-[10px] uppercase tracking-widest shadow-sm flex items-center gap-2 w-fit border border-white/30">
                                 KODE: {{ $promo->code }}
                             </span>
                         </div>
-                        @endif
                     </div>
                 </div>
                 @endforeach
@@ -124,7 +143,7 @@
             @if(count($promos) > 1)
             <div class="flex justify-center gap-1.5 mt-3">
                 @foreach($promos as $index => $promo)
-                <button @click="active = {{ $index }}" class="h-1.5 rounded-full transition-all duration-300" :class="active === {{ $index }} ? 'w-5 bg-brand' : 'w-1.5 bg-slate-200'"></button>
+                <button @click="active = {{ $index }}; startTimer()" class="h-1.5 rounded-full transition-all duration-300" :class="active === {{ $index }} ? 'w-5 bg-brand' : 'w-1.5 bg-slate-200'"></button>
                 @endforeach
             </div>
             @endif
@@ -252,7 +271,7 @@
                 <label class="block text-[10px] font-bold text-slate-700 mb-1.5 px-1">Nama Anda *</label>
                 <input
                     type="text"
-                    wire:model="customerName"
+                    wire:model.live="customerName"
                     required
                     placeholder="Masukkan nama pemesan..."
                     class="w-full px-5 py-3.5 bg-white border border-slate-200 rounded-2xl focus:ring-2 focus:ring-brand outline-none font-bold text-xs transition">
@@ -284,20 +303,6 @@
                             <h4 class="font-black text-slate-900 text-xs line-clamp-1 leading-tight">{{ $appliedPromo['name'] }}</h4>
                             <p class="text-[10px] font-bold text-slate-400 mt-0.5">{{ $appliedPromo['bundling_items'] }}</p>
                             <p class="text-xs font-black text-brand mt-1">Rp {{ number_format($appliedPromo['value'], 0, ',', '.') }}</p>
-                        </div>
-                    </div>
-                </div>
-                @endif
-                @if($appliedPromo && $appliedPromo['promo_type'] === 'free_item')
-                <div class="py-4 flex items-center justify-between gap-4 first:pt-0">
-                    <div class="flex items-center gap-3 flex-1 min-w-0">
-                        <div class="w-16 h-16 rounded-2xl overflow-hidden bg-emerald-50 shrink-0 border border-emerald-100 flex items-center justify-center text-emerald-500">
-                            <i data-lucide="gift" class="w-8 h-8"></i>
-                        </div>
-                        <div class="min-w-0 flex-1">
-                            <h4 class="font-black text-slate-900 text-xs line-clamp-1 leading-tight">{{ $appliedPromo['name'] }}</h4>
-                            <p class="text-[10px] font-bold text-slate-400 mt-0.5">Free: {{ $appliedPromo['free_item_name'] }}</p>
-                            <p class="text-xs font-black text-emerald-500 mt-1">Rp 0</p>
                         </div>
                     </div>
                 </div>
@@ -402,11 +407,13 @@
         <button
             wire:click="placeOrder()"
             @if(empty($customerName)) disabled @endif
-            class="w-full py-4.5 bg-brand disabled:opacity-40 disabled:cursor-not-allowed text-white rounded-2xl font-black text-sm tracking-widest uppercase shadow-xl shadow-brand/20 flex items-center justify-center gap-2 active:scale-95 transition">
+            class="w-full py-5 bg-brand disabled:opacity-40 disabled:cursor-not-allowed text-white rounded-2xl font-black text-sm tracking-widest uppercase shadow-xl shadow-brand/20 active:scale-95 transition flex items-center justify-center">
             <span wire:loading.remove wire:target="placeOrder">KIRIM PESANAN</span>
-            <span wire:loading wire:target="placeOrder" class="flex items-center justify-center gap-2">
-                <svg class="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg>
-                Memproses...
+            <span wire:loading wire:target="placeOrder">
+                <span class="flex items-center justify-center gap-2">
+                    <svg class="animate-spin w-4 h-4 text-white" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg>
+                    <span>Memproses...</span>
+                </span>
             </span>
         </button>
     </div>
@@ -530,6 +537,18 @@
                 <img src="{{ str_starts_with($setting->qris_image, 'http') ? $setting->qris_image : asset('storage/' . $setting->qris_image) }}" class="w-full h-full object-contain rounded-2xl" alt="QRIS Payment">
             </div>
 
+            {{-- Download QR Code Button --}}
+            @php
+                $qrisImageUrl = str_starts_with($setting->qris_image, 'http') ? $setting->qris_image : asset('storage/' . $setting->qris_image);
+            @endphp
+            <div class="mt-3 flex justify-center">
+                <a href="{{ $qrisImageUrl }}" download="QRIS-Payment.png" target="_blank"
+                   class="inline-flex items-center gap-2 px-5 py-3 bg-slate-100 border border-slate-200 hover:bg-slate-200 text-slate-700 rounded-2xl text-xs font-black uppercase tracking-widest transition active:scale-95 shadow-sm">
+                    <i data-lucide="download" class="w-4 h-4 text-slate-500"></i>
+                    <span>Unduh Kode QR</span>
+                </a>
+            </div>
+
             @if($setting->bank_name || $setting->account_number)
             <div class="bg-slate-50 p-4 rounded-2xl mt-4 text-left border border-slate-100">
                 <span class="block text-[9px] font-black uppercase tracking-widest text-slate-400 mb-1">Atau Transfer Rekening</span>
@@ -550,7 +569,7 @@
         {{-- Reset Back to Menu --}}
         <button
             wire:click="setScreen('menu')"
-            class="w-full py-4.5 bg-slate-900 hover:bg-slate-800 text-white rounded-2xl font-black text-sm tracking-widest uppercase shadow-xl transition active:scale-95">
+            class="w-full py-5 bg-slate-900 hover:bg-slate-800 text-white rounded-2xl font-black text-sm tracking-widest uppercase shadow-xl transition active:scale-95">
             KEMBALI KE BERANDA
         </button>
     </div>

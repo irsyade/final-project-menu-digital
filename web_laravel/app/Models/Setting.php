@@ -8,15 +8,16 @@ class Setting extends Model
 {
     protected $fillable = [
         'site_name',
-        'address',
-        'site_logo', 
-        'site_favicon', 
-        'login_background', 
+        'site_logo',
+        'site_favicon',
+        'login_background',
         'primary_color',
+        'theme',
         'qris_image',
         'bank_name',
         'account_number',
         'account_name',
+        'owner_name',
         'phone',
         'email',
         'address',
@@ -25,14 +26,14 @@ class Setting extends Model
         'is_cash_active',
         'is_qris_active',
         'is_transfer_active',
-        'quick_amounts'
+        'quick_amounts',
     ];
 
     protected $casts = [
-        'operational_hours' => 'array',
-        'quick_amounts' => 'array',
-        'is_cash_active' => 'boolean',
-        'is_qris_active' => 'boolean',
+        'operational_hours'  => 'array',
+        'quick_amounts'      => 'array',
+        'is_cash_active'     => 'boolean',
+        'is_qris_active'     => 'boolean',
         'is_transfer_active' => 'boolean',
     ];
 }

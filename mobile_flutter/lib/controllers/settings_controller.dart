@@ -1,9 +1,8 @@
-import 'dart:convert';
 import 'package:get/get.dart';
-import 'package:mobile_flutter/services/api_service.dart';
+import 'package:mobile_flutter/services/settings_service.dart';
 
 class SettingsController extends GetxController {
-  final ApiService _apiService = ApiService();
+  final SettingsService _settingsService = SettingsService();
 
   var isLoading = false.obs;
   var isSaving = false.obs;
@@ -18,12 +17,9 @@ class SettingsController extends GetxController {
   Future<void> fetchSettings() async {
     isLoading.value = true;
     try {
-      final response = await _apiService.get('/settings');
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        if (data['success']) {
-          settings.value = data['data'];
-        }
+      final data = await _settingsService.getSettings();
+      if (data != null) {
+        settings.value = data;
       }
     } catch (e) {
       print('Fetch Settings Error: $e');
@@ -32,33 +28,20 @@ class SettingsController extends GetxController {
     }
   }
 
-  Future<bool> saveSettings(Map<String, dynamic> data, {String? logoPath}) async {
+  // Alias method for loadSettings
+  Future<void> loadSettings() => fetchSettings();
+
+  Future<bool> saveSettings(Map<String, dynamic> data, {String? logoPath, String? qrisImagePath}) async {
     isSaving.value = true;
     try {
-      // Convert map to strings for multipart request
-      Map<String, String> fields = {};
-      data.forEach((key, value) {
-        if (value is Map || value is List) {
-          fields[key] = jsonEncode(value);
-        } else if (value != null) {
-          fields[key] = value.toString();
-        }
-      });
-
-      final response = await _apiService.postMultipart(
-        '/settings',
-        fields,
-        filePath: logoPath,
-        fileField: 'site_logo',
+      final resultData = await _settingsService.saveSettings(
+        data,
+        logoPath: logoPath,
+        qrisImagePath: qrisImagePath,
       );
-
-      if (response.statusCode == 200) {
-        final responseString = await response.stream.bytesToString();
-        final result = jsonDecode(responseString);
-        if (result['success']) {
-          settings.value = result['data'];
-          return true;
-        }
+      if (resultData != null) {
+        settings.value = resultData;
+        return true;
       }
       return false;
     } catch (e) {

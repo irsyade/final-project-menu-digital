@@ -111,6 +111,9 @@ class ReportController extends Controller
 
     public function exportCsv(Request $request)
     {
+        // Accept token from query string (for browser-based download from mobile)
+        $this->authenticateFromQuery($request);
+
         $period = $request->get('period', 'day');
         $now = Carbon::now();
         $startDate = $now->copy();
@@ -127,22 +130,25 @@ class ReportController extends Controller
         $orders = Order::where('status', 'completed')->whereBetween('created_at', [$startDate, $endDate])->latest()->get();
 
         $headers = [
-            "Content-type"        => "text/csv",
+            "Content-type"        => "text/csv; charset=UTF-8",
             "Content-Disposition" => "attachment; filename=laporan-penjualan-$period.csv",
             "Pragma"              => "no-cache",
             "Cache-Control"       => "must-revalidate, post-check=0, pre-check=0",
-            "Expires"             => "0"
+            "Expires"             => "0",
+            "Access-Control-Allow-Origin" => "*",
         ];
 
         $columns = ['ID Pesanan', 'Tanggal', 'Nama Pelanggan', 'Status', 'Total Pendapatan'];
 
         $callback = function() use($orders, $columns) {
             $file = fopen('php://output', 'w');
+            // BOM for Excel UTF-8 compatibility
+            fprintf($file, chr(0xEF).chr(0xBB).chr(0xBF));
             fputcsv($file, $columns);
 
             foreach ($orders as $order) {
                 fputcsv($file, [
-                    $order->id,
+                    '#' . str_pad($order->id, 3, '0', STR_PAD_LEFT),
                     $order->created_at->format('Y-m-d H:i'),
                     $order->name ?? 'Pelanggan',
                     $order->status,
@@ -157,6 +163,9 @@ class ReportController extends Controller
 
     public function exportPdf(Request $request)
     {
+        // Accept token from query string (for browser-based download from mobile)
+        $this->authenticateFromQuery($request);
+
         $period = $request->get('period', 'day');
         $now = Carbon::now();
         $startDate = $now->copy();
@@ -175,5 +184,19 @@ class ReportController extends Controller
 
         $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('admin.reports.pdf', compact('orders', 'totalRevenue', 'period', 'startDate', 'endDate'));
         return $pdf->download("laporan-penjualan-$period.pdf");
+    }
+
+    /**
+     * Allow token authentication via ?token=xxx query param.
+     * This is needed for browser-based file downloads from mobile apps
+     * where setting Authorization headers is not possible.
+     */
+    private function authenticateFromQuery(Request $request): void
+    {
+        $token = $request->query('token');
+        if ($token) {
+            // Inject as Bearer header so Sanctum can authenticate it
+            $request->headers->set('Authorization', 'Bearer ' . $token);
+        }
     }
 }

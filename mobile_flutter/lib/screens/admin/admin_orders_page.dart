@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:lucide_icons/lucide_icons.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:intl/intl.dart';
 import 'package:mobile_flutter/constants.dart';
 import 'package:mobile_flutter/controllers/order_controller.dart';
+import 'package:mobile_flutter/controllers/auth_controller.dart';
 
 class AdminOrdersPage extends StatefulWidget {
   const AdminOrdersPage({super.key});
@@ -14,9 +15,16 @@ class AdminOrdersPage extends StatefulWidget {
 
 class _AdminOrdersPageState extends State<AdminOrdersPage> {
   final OrderController orderController = Get.find<OrderController>();
+  final AuthController authController = Get.find<AuthController>();
   final selectedTrx = Rxn<dynamic>();
   String _filterStatus = 'Semua';
   final TextEditingController _searchController = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    orderController.fetchAllOrders();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -147,95 +155,108 @@ class _AdminOrdersPageState extends State<AdminOrdersPage> {
   }
 
   Widget _buildTransactionList({bool isMobile = false}) {
-    return Obx(() {
-      if (orderController.isLoading.value) {
-        return const Center(child: CircularProgressIndicator());
-      }
-      
-      List<dynamic> orders = orderController.allOrders;
-      
-      // Basic filtering
-      if (_filterStatus != 'Semua') {
-        String mappedStatus = _filterStatus == 'Baru' ? 'pending' : (_filterStatus == 'Diproses' ? 'processing' : 'completed');
-        orders = orders.where((o) => o['status'].toString().toLowerCase() == mappedStatus).toList();
-      }
+    return RefreshIndicator(
+      onRefresh: () async {
+        await orderController.fetchAllOrders();
+      },
+      child: Obx(() {
+        if (orderController.isLoading.value) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        
+        List<dynamic> orders = orderController.allOrders;
+        
+        // Basic filtering
+        if (_filterStatus != 'Semua') {
+          String mappedStatus = _filterStatus == 'Baru' ? 'pending' : (_filterStatus == 'Diproses' ? 'processing' : 'completed');
+          orders = orders.where((o) => o['status'].toString().toLowerCase() == mappedStatus).toList();
+        }
 
-      if (orders.isEmpty) {
-        return const Center(child: Text('Tidak ada pesanan', style: TextStyle(color: AppColors.slate400, fontWeight: FontWeight.bold)));
-      }
-      
-      return ListView.separated(
-        padding: const EdgeInsets.all(24),
-        itemCount: orders.length,
-        separatorBuilder: (_, __) => const SizedBox(height: 16),
-        itemBuilder: (context, index) {
-          final trx = orders[index];
-          return GestureDetector(
-            onTap: () {
-              selectedTrx.value = trx;
-              if (isMobile) {
-                _showMobileDetail(context, trx);
-              }
-            },
+        if (orders.isEmpty) {
+          return SingleChildScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
             child: Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: AppColors.slate100),
-                boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 10, offset: const Offset(0, 4))],
-              ),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text("#ORD-${trx['id'].toString().padLeft(3, '0')}", style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 16, color: AppColors.slate900)),
-                            Text(
-                              DateFormat('HH:mm').format(DateTime.parse(trx['created_at'])), 
-                              style: const TextStyle(color: AppColors.slate300, fontSize: 12, fontWeight: FontWeight.bold)
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 4),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text(
-                              (trx['name'] ?? 'Meja -').toString(), 
-                              style: const TextStyle(color: AppColors.slate500, fontSize: 13, fontWeight: FontWeight.bold)
-                            ),
-                            Text(
-                              "${(trx['items'] as List?)?.length ?? 0} item", 
-                              style: const TextStyle(color: AppColors.slate400, fontSize: 12, fontWeight: FontWeight.bold)
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 12),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text(
-                              NumberFormat.currency(locale: 'id_ID', symbol: 'Rp ', decimalDigits: 0).format(double.tryParse(trx['total_price'].toString()) ?? 0), 
-                              style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 15, color: AppColors.primary)
-                            ),
-                            _statusBadge(trx['status']),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
+              height: MediaQuery.of(context).size.height * 0.5,
+              alignment: Alignment.center,
+              child: const Text('Tidak ada pesanan', style: TextStyle(color: AppColors.slate400, fontWeight: FontWeight.bold)),
             ),
           );
-        },
-      );
-    });
+        }
+        
+        return ListView.separated(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.all(24),
+          itemCount: orders.length,
+          separatorBuilder: (_, __) => const SizedBox(height: 16),
+          itemBuilder: (context, index) {
+            final trx = orders[index];
+            return GestureDetector(
+              onTap: () {
+                selectedTrx.value = trx;
+                if (isMobile) {
+                  _showMobileDetail(context, trx);
+                }
+              },
+              child: Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: AppColors.slate100),
+                  boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 10, offset: const Offset(0, 4))],
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text("#ORD-${trx['id'].toString().padLeft(3, '0')}", style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 16, color: AppColors.slate900)),
+                              Text(
+                                DateFormat('HH:mm').format(DateTime.parse(trx['created_at'])), 
+                                style: const TextStyle(color: AppColors.slate300, fontSize: 12, fontWeight: FontWeight.bold)
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 4),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                (trx['name'] ?? 'Meja -').toString(), 
+                                style: const TextStyle(color: AppColors.slate500, fontSize: 13, fontWeight: FontWeight.bold)
+                              ),
+                              Text(
+                                "${(trx['items'] as List?)?.length ?? 0} item", 
+                                style: const TextStyle(color: AppColors.slate400, fontSize: 12, fontWeight: FontWeight.bold)
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                NumberFormat.currency(locale: 'id_ID', symbol: 'Rp ', decimalDigits: 0).format(double.tryParse(trx['total_price'].toString()) ?? 0), 
+                                style: TextStyle(fontWeight: FontWeight.w900, fontSize: 15, color: AppColors.primary)
+                              ),
+                              _statusBadge(trx['status']),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      }),
+    );
   }
 
   Widget _statusBadge(String status) {
@@ -350,76 +371,87 @@ class _AdminOrdersPageState extends State<AdminOrdersPage> {
               const Text("Total", style: TextStyle(fontWeight: FontWeight.w900, fontSize: 18)),
               Text(
                 NumberFormat.currency(locale: 'id_ID', symbol: 'Rp ', decimalDigits: 0).format(double.tryParse(trx['total_price'].toString()) ?? 0), 
-                style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 20, color: AppColors.primary)
+                style: TextStyle(fontWeight: FontWeight.w900, fontSize: 20, color: AppColors.primary)
               ),
             ],
           ),
           const SizedBox(height: 24),
           
           // Action Buttons for Admin Detail Panel
-          if (trx['status'].toString().toLowerCase() == 'pending')
-            Row(
-              children: [
-                Expanded(
-                  child: ElevatedButton(
-                    onPressed: () => _updateStatus(trx['id'], 'processing'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primary,
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          if (authController.isKasir) ...[
+            if (trx['status'].toString().toLowerCase() == 'pending')
+              Row(
+                children: [
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () => _updateStatus(trx['id'], 'processing'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                      child: const Text('TERIMA', style: TextStyle(fontWeight: FontWeight.w900, color: Colors.white)),
                     ),
-                    child: const Text('TERIMA', style: TextStyle(fontWeight: FontWeight.w900, color: Colors.white)),
                   ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: ElevatedButton(
-                    onPressed: () => _updateStatus(trx['id'], 'cancelled'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.red,
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () => _updateStatus(trx['id'], 'cancelled'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.red,
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                      child: const Text('TOLAK', style: TextStyle(fontWeight: FontWeight.w900, color: Colors.white)),
                     ),
-                    child: const Text('TOLAK', style: TextStyle(fontWeight: FontWeight.w900, color: Colors.white)),
                   ),
-                ),
-              ],
-            ),
-            
-          if (trx['status'].toString().toLowerCase() == 'processing')
-            Row(
-              children: [
-                Expanded(
-                  child: ElevatedButton(
-                    onPressed: () => _updateStatus(trx['id'], 'completed'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.success,
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ],
+              ),
+              
+            if (trx['status'].toString().toLowerCase() == 'processing')
+              Row(
+                children: [
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () => _updateStatus(trx['id'], 'completed'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.success,
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                      child: const Text('TANDAI SELESAI', style: TextStyle(fontWeight: FontWeight.w900, color: Colors.white)),
                     ),
-                    child: const Text('TANDAI SELESAI', style: TextStyle(fontWeight: FontWeight.w900, color: Colors.white)),
                   ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: ElevatedButton(
-                    onPressed: () => _updateStatus(trx['id'], 'cancelled'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.red,
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () => _updateStatus(trx['id'], 'cancelled'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.red,
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                      child: const Text('TOLAK', style: TextStyle(fontWeight: FontWeight.w900, color: Colors.white)),
                     ),
-                    child: const Text('TOLAK', style: TextStyle(fontWeight: FontWeight.w900, color: Colors.white)),
                   ),
-                ),
-              ],
-            ),
+                ],
+              ),
+          ],
         ],
       ),
     );
   }
 
   void _updateStatus(int id, String status) async {
+    if (!authController.isKasir) {
+      Get.snackbar(
+        'Gagal', 
+        'Hanya kasir yang dapat mengubah status pesanan.',
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+      );
+      return;
+    }
     bool success = await orderController.updateOrderStatus(id, status);
     if (success) {
       // Refresh local selection

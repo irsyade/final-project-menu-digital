@@ -44,9 +44,7 @@
         <aside id="sidebar" class="fixed inset-y-0 left-0 z-50 w-60 bg-[#1E1E2E] text-slate-400 transition-transform duration-300 -translate-x-full lg:translate-x-0 lg:static lg:inset-0 flex flex-col">
             <div class="p-6 mb-4">
                 <div class="flex items-center gap-3">
-                    <div class="w-8 h-8 bg-brand rounded-lg flex items-center justify-center shadow-lg shadow-brand/20">
-                        <i data-lucide="utensils-crossed" class="w-5 h-5 text-white"></i>
-                    </div>
+                    <img src="{{ asset('logo-menuku.png') }}" class="w-8 h-8 object-contain rounded-lg shadow-lg">
                     <span class="text-white font-black text-xl tracking-tighter italic">Menu<span class="text-brand">Ku</span></span>
                 </div>
             </div>
@@ -115,12 +113,12 @@
         <!-- Main Content -->
         <main class="flex-1 flex flex-col min-w-0 overflow-hidden relative">
             <!-- Top Bar -->
-            <header class="h-20 bg-white border-b border-slate-200 px-8 flex items-center justify-between sticky top-0 z-40">
+            <header class="h-20 bg-white border-b border-slate-200 px-4 lg:px-8 flex items-center justify-between sticky top-0 z-40">
                 <div class="flex items-center gap-4">
                     <button id="sidebarToggle" class="lg:hidden p-2 text-slate-500 hover:bg-slate-100 rounded-lg">
                         <i data-lucide="menu" class="w-6 h-6"></i>
                     </button>
-                    <h2 class="text-xl font-black text-slate-900 tracking-tight">@yield('page_title', 'Dashboard Overview')</h2>
+                    <h2 class="text-xl font-black text-slate-900 tracking-tight">@yield('page_title', 'Pengaturan')</h2>
                 </div>
                 
                 <div class="flex items-center gap-6">
@@ -128,7 +126,7 @@
                     <!-- Profile -->
                     <div class="flex items-center gap-3 pl-6 border-l border-slate-200">
                         <div class="text-right hidden sm:block">
-                            <p class="text-sm font-bold text-slate-900 leading-none">{{ Auth::user()->name ?? 'Administrator' }}</p>
+                            <p id="header-owner-name" class="text-sm font-bold text-slate-900 leading-none">{{ $setting->owner_name ?? Auth::user()->name ?? 'Administrator' }}</p>
                             <span class="text-[10px] font-black text-brand uppercase tracking-tighter">{{ Auth::user()->role == 'admin' ? 'Pemilik Resto' : 'Staf Kasir' }}</span>
                         </div>
                         <div class="w-10 h-10 rounded-xl bg-slate-100 text-slate-400 flex items-center justify-center border border-slate-200">
@@ -140,7 +138,7 @@
 
             <!-- Content Area -->
             <div class="flex-1 overflow-hidden bg-[#F7F6F3] flex flex-col">
-                <div class="flex-1 overflow-hidden p-8 flex flex-col">
+                <div class="flex-1 overflow-hidden p-0 sm:p-4 lg:p-8 flex flex-col">
                     @if(session('success'))
                         <div class="mb-8 p-4 bg-emerald-50 border border-emerald-100 text-emerald-700 rounded-2xl flex items-center gap-3 shadow-sm animate-in fade-in slide-in-from-top-4 duration-500 shrink-0">
                             <i data-lucide="check-circle" class="w-5 h-5"></i>
@@ -172,6 +170,24 @@
 
     <script>
         lucide.createIcons();
+
+        window.addEventListener('settings-saved', (event) => {
+            const newName = event.detail.ownerName;
+            if (newName) {
+                const headerName = document.getElementById('header-owner-name');
+                if (headerName) {
+                    headerName.textContent = newName;
+                }
+            }
+        });
+
+        document.addEventListener('livewire:init', () => {
+            Livewire.hook('morph.updated', ({ el, component }) => {
+                if (typeof lucide !== 'undefined') {
+                    lucide.createIcons();
+                }
+            });
+        });
 
         const sidebar = document.getElementById('sidebar');
         const sidebarToggle = document.getElementById('sidebarToggle');

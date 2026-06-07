@@ -15,6 +15,7 @@ import 'package:mobile_flutter/screens/login_screen.dart';
 import 'package:mobile_flutter/screens/kasir/kasir_layout.dart';
 import 'package:mobile_flutter/constants.dart';
 import 'package:intl/date_symbol_data_local.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:mobile_flutter/blocs/auth/auth_bloc.dart';
@@ -24,6 +25,13 @@ import 'package:mobile_flutter/cubits/theme/theme_cubit.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await initializeDateFormatting('id_ID', null);
+  
+  final prefs = await SharedPreferences.getInstance();
+  final customUrl = prefs.getString('custom_base_url');
+  if (customUrl != null && customUrl.isNotEmpty) {
+    ApiConstants.setCustomBaseUrl(customUrl);
+  }
+  
   runApp(const MyApp());
 }
 

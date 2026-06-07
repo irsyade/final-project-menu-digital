@@ -1,3 +1,5 @@
+import 'package:mobile_flutter/constants.dart';
+
 class Promo {
   final int id;
   final String name;
@@ -38,6 +40,17 @@ class Promo {
   });
 
   factory Promo.fromJson(Map<String, dynamic> json) {
+    String? imageUrl = json['image'];
+    if (imageUrl != null && !imageUrl.startsWith('http')) {
+      if (imageUrl.startsWith('/storage/')) {
+        imageUrl = imageUrl.replaceFirst('/storage/', '');
+      } else if (imageUrl.startsWith('storage/')) {
+        imageUrl = imageUrl.replaceFirst('storage/', '');
+      }
+      // Use the storage URL from constants
+      imageUrl = '${ApiConstants.baseUrl.replaceAll('/api', '/storage/')}$imageUrl';
+    }
+
     return Promo(
       id: int.parse(json['id'].toString()),
       name: json['name'] ?? '',
@@ -51,7 +64,7 @@ class Promo {
       used: int.parse(json['used']?.toString() ?? '0'),
       startDate: json['start_date'] != null ? DateTime.parse(json['start_date']) : null,
       endDate: json['end_date'] != null ? DateTime.parse(json['end_date']) : null,
-      image: json['image'],
+      image: imageUrl,
       isBanner: json['is_banner'] == 1 || json['is_banner'] == true,
       isActive: json['is_active'] == 1 || json['is_active'] == true,
       bundlingItems: json['bundling_items'],

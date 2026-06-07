@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:lucide_icons/lucide_icons.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:mobile_flutter/constants.dart';
 import 'package:mobile_flutter/controllers/order_controller.dart';
 import 'package:mobile_flutter/controllers/auth_controller.dart';
+import 'package:mobile_flutter/controllers/settings_controller.dart';
 import 'package:pdf/pdf.dart';
 import 'package:printing/printing.dart';
 import 'package:mobile_flutter/utils/pdf_receipt_generator.dart';
@@ -83,7 +84,7 @@ class RiwayatPesananPage extends StatelessWidget {
         "Pesanan Masuk",
         style: GoogleFonts.outfit(
           fontWeight: FontWeight.w900,
-          fontSize: 24,
+          fontSize: 22,
           color: AppColors.slate900,
         ),
       ),
@@ -114,7 +115,7 @@ class RiwayatPesananPage extends StatelessWidget {
   Widget _statCard(String label, String val) {
     return Expanded(
       child: Container(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(16),
@@ -129,9 +130,9 @@ class RiwayatPesananPage extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(val, style: GoogleFonts.outfit(fontWeight: FontWeight.w900, fontSize: 24, color: AppColors.slate900)),
+            Text(val, style: GoogleFonts.outfit(fontWeight: FontWeight.w900, fontSize: 20, color: AppColors.slate900)),
             const SizedBox(height: 4),
-            Text(label, style: GoogleFonts.outfit(color: AppColors.slate400, fontSize: 12, fontWeight: FontWeight.bold)),
+            Text(label, style: GoogleFonts.outfit(color: AppColors.slate400, fontSize: 11, fontWeight: FontWeight.bold)),
           ],
         ),
       ),
@@ -366,7 +367,7 @@ class RiwayatPesananPage extends StatelessWidget {
 
     return Container(
       color: Colors.white,
-      padding: const EdgeInsets.all(32),
+      padding: const EdgeInsets.all(24),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -591,53 +592,62 @@ class RiwayatPesananPage extends StatelessWidget {
                   color: AppColors.slate50,
                   border: Border.all(color: AppColors.slate200),
                 ),
-                child: Column(
-                  children: [
-                    Text("MenuKu Resto", style: GoogleFonts.outfit(fontWeight: FontWeight.w900, fontSize: 20)),
-                    Text("Jl. Digital Menu No. 123", style: GoogleFonts.outfit(fontSize: 12, color: AppColors.slate500)),
-                    const Divider(height: 32, thickness: 1, color: AppColors.slate300),
-                    
-                    _receiptRow("No. Transaksi", "#TRX${trx['id'].toString().padLeft(3, '0')}"),
-                    _receiptRow("Kasir", authController.user['name'] ?? 'Admin/Kasir'),
-                    _receiptRow("Waktu", DateFormat('dd/MM/yy HH:mm').format(DateTime.parse(trx['created_at']))),
-                    _receiptRow("Tipe", trx['address'] ?? 'Dine In'),
-                    
-                    const Divider(height: 32, thickness: 1, color: AppColors.slate300),
-                    
-                    // Items
-                    ...(trx['items'] as List).map((item) {
-                      final p = double.tryParse(item['price'].toString()) ?? 0;
-                      final q = int.tryParse(item['quantity'].toString()) ?? 0;
-                      return Padding(
-                        padding: const EdgeInsets.only(bottom: 8),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Expanded(child: Text("${q}x ${item['product']?['name'] ?? item['product_name'] ?? 'Produk Tidak Ditemukan'}", style: GoogleFonts.outfit(fontSize: 13))),
-                            Text(CurrencyFormat.convertToIdr(p * q, 0), style: GoogleFonts.outfit(fontSize: 13, fontWeight: FontWeight.bold)),
-                          ],
-                        ),
-                      );
-                    }).toList(),
-                    
-                    const Divider(height: 32, thickness: 1, color: AppColors.slate300),
-                    
-                    _receiptRow("Subtotal", CurrencyFormat.convertToIdr(subtotal, 0)),
-                    _receiptRow("Pajak (10%)", CurrencyFormat.convertToIdr(tax, 0)),
-                    const SizedBox(height: 12),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text("TOTAL", style: GoogleFonts.outfit(fontWeight: FontWeight.w900, fontSize: 16)),
-                        Text(CurrencyFormat.convertToIdr(total, 0), style: GoogleFonts.outfit(fontWeight: FontWeight.w900, fontSize: 18)),
-                      ],
-                    ),
-                    
-                    const SizedBox(height: 32),
-                    Text("TERIMA KASIH", style: GoogleFonts.outfit(fontWeight: FontWeight.w900, letterSpacing: 4, color: AppColors.slate400, fontSize: 12)),
-                    Text("Silakan berkunjung kembali!", style: GoogleFonts.outfit(fontSize: 10, color: AppColors.slate400)),
-                  ],
-                ),
+                child: Obx(() {
+                  final settingsController = Get.find<SettingsController>();
+                  final restaurantName = settingsController.settings['site_name']?.toString() ?? 'MenuKu Resto';
+                  final restaurantAddress = settingsController.settings['address']?.toString() ?? 'Jl. Digital Menu No. 123';
+                  final restaurantPhone = settingsController.settings['phone']?.toString() ?? '';
+                  
+                  return Column(
+                    children: [
+                      Text(restaurantName, style: GoogleFonts.outfit(fontWeight: FontWeight.w900, fontSize: 20)),
+                      Text(restaurantAddress, style: GoogleFonts.outfit(fontSize: 12, color: AppColors.slate500)),
+                      if (restaurantPhone.isNotEmpty)
+                        Text(restaurantPhone, style: GoogleFonts.outfit(fontSize: 12, color: AppColors.slate500)),
+                      const Divider(height: 32, thickness: 1, color: AppColors.slate300),
+                      
+                      _receiptRow("No. Transaksi", "#TRX${trx['id'].toString().padLeft(3, '0')}"),
+                      _receiptRow("Kasir", authController.user['name'] ?? 'Admin/Kasir'),
+                      _receiptRow("Waktu", DateFormat('dd/MM/yy HH:mm').format(DateTime.parse(trx['created_at']))),
+                      _receiptRow("Tipe", trx['address'] ?? 'Dine In'),
+                      
+                      const Divider(height: 32, thickness: 1, color: AppColors.slate300),
+                      
+                      // Items
+                      ...(trx['items'] as List).map((item) {
+                        final p = double.tryParse(item['price'].toString()) ?? 0;
+                        final q = int.tryParse(item['quantity'].toString()) ?? 0;
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 8),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Expanded(child: Text("${q}x ${item['product']?['name'] ?? item['product_name'] ?? 'Produk Tidak Ditemukan'}", style: GoogleFonts.outfit(fontSize: 13))),
+                              Text(CurrencyFormat.convertToIdr(p * q, 0), style: GoogleFonts.outfit(fontSize: 13, fontWeight: FontWeight.bold)),
+                            ],
+                          ),
+                        );
+                      }).toList(),
+                      
+                      const Divider(height: 32, thickness: 1, color: AppColors.slate300),
+                      
+                      _receiptRow("Subtotal", CurrencyFormat.convertToIdr(subtotal, 0)),
+                      _receiptRow("Pajak (10%)", CurrencyFormat.convertToIdr(tax, 0)),
+                      const SizedBox(height: 12),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text("TOTAL", style: GoogleFonts.outfit(fontWeight: FontWeight.w900, fontSize: 16)),
+                          Text(CurrencyFormat.convertToIdr(total, 0), style: GoogleFonts.outfit(fontWeight: FontWeight.w900, fontSize: 18)),
+                        ],
+                      ),
+                      
+                      const SizedBox(height: 32),
+                      Text("TERIMA KASIH", style: GoogleFonts.outfit(fontWeight: FontWeight.w900, letterSpacing: 4, color: AppColors.slate400, fontSize: 12)),
+                      Text("Silakan berkunjung kembali!", style: GoogleFonts.outfit(fontSize: 10, color: AppColors.slate400)),
+                    ],
+                  );
+                }),
               ),
               
               Padding(

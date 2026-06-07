@@ -33,9 +33,7 @@
     <div class="max-w-md w-full">
         <!-- Logo -->
         <div class="flex flex-col items-center mb-10">
-            <div class="w-14 h-14 bg-brand rounded-2xl flex items-center justify-center shadow-xl shadow-brand/30 mb-4">
-                <i data-lucide="utensils-crossed" class="w-8 h-8 text-white"></i>
-            </div>
+            <img src="{{ asset('logo-menuku.png') }}" class="w-14 h-14 object-contain rounded-2xl shadow-xl shadow-brand/10 mb-4">
             <h1 class="text-3xl font-black tracking-tighter">Menu<span class="text-brand">Ku</span></h1>
         </div>
 
@@ -44,12 +42,23 @@
             <div class="mb-8">
                 <h2 class="text-2xl font-bold text-slate-900 mb-2">Selamat Datang!</h2>
                 <p class="text-slate-500 font-light text-sm">Silakan login untuk mengelola restoran Anda.</p>
+                <div class="mt-3 inline-flex items-center gap-1.5 px-3 py-1.5 bg-amber-50 border border-amber-200 rounded-xl">
+                    <i data-lucide="shield-check" class="w-3.5 h-3.5 text-amber-600"></i>
+                    <span class="text-[11px] font-bold text-amber-700 uppercase tracking-wider">Khusus Admin</span>
+                </div>
             </div>
 
             @if($errors->any())
                 <div class="mb-6 p-4 bg-red-50 border border-red-100 text-red-600 rounded-2xl text-xs font-bold flex items-center gap-2">
-                    <i data-lucide="alert-circle" class="w-4 h-4"></i>
+                    <i data-lucide="alert-circle" class="w-4 h-4 shrink-0"></i>
                     <span>{{ $errors->first() }}</span>
+                </div>
+            @endif
+
+            @if(session('status'))
+                <div class="mb-6 p-4 bg-green-50 border border-green-100 text-green-600 rounded-2xl text-xs font-bold flex items-center gap-2">
+                    <i data-lucide="check-circle" class="w-4 h-4 shrink-0"></i>
+                    <span>{{ session('status') }}</span>
                 </div>
             @endif
 

@@ -44,12 +44,13 @@ class TableController extends Controller
     public function store(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'number'    => 'required|string|max:50',
-            'name'      => 'nullable|string|max:100',
-            'type'      => 'required|string|max:50',
-            'capacity'  => 'required|integer|min:1|max:50',
-            'status'    => 'required|in:' . implode(',', $this->allowedStatuses),
-            'is_active' => 'boolean',
+            'number'        => 'required|string|max:50',
+            'name'          => 'nullable|string|max:100',
+            'type'          => 'required|string|max:50',
+            'capacity'      => 'required|integer|min:1|max:50',
+            'status'        => 'required|in:' . implode(',', $this->allowedStatuses),
+            'customer_name' => 'nullable|string|max:255',
+            'is_active'     => 'boolean',
         ]);
 
         if ($validator->fails()) {
@@ -61,12 +62,13 @@ class TableController extends Controller
 
         try {
             $table = Table::create([
-                'number'    => $request->number,
-                'name'      => $request->name,
-                'type'      => $request->type,
-                'capacity'  => $request->capacity,
-                'status'    => $request->status,
-                'is_active' => $request->boolean('is_active', true),
+                'number'        => $request->number,
+                'name'          => $request->name,
+                'type'          => $request->type,
+                'capacity'      => $request->capacity,
+                'status'        => $request->status,
+                'customer_name' => $request->customer_name,
+                'is_active'     => $request->boolean('is_active', true),
             ]);
 
             return response()->json([
@@ -96,12 +98,13 @@ class TableController extends Controller
         }
 
         $validator = Validator::make($request->all(), [
-            'number'    => 'required|string|max:50',
-            'name'      => 'nullable|string|max:100',
-            'type'      => 'required|string|max:50',
-            'capacity'  => 'required|integer|min:1|max:50',
-            'status'    => 'required|in:' . implode(',', $this->allowedStatuses),
-            'is_active' => 'boolean',
+            'number'        => 'required|string|max:50',
+            'name'          => 'nullable|string|max:100',
+            'type'          => 'required|string|max:50',
+            'capacity'      => 'required|integer|min:1|max:50',
+            'status'        => 'required|in:' . implode(',', $this->allowedStatuses),
+            'customer_name' => 'nullable|string|max:255',
+            'is_active'     => 'boolean',
         ]);
 
         if ($validator->fails()) {
@@ -113,12 +116,13 @@ class TableController extends Controller
 
         try {
             $table->update([
-                'number'    => $request->number,
-                'name'      => $request->name,
-                'type'      => $request->type,
-                'capacity'  => $request->capacity,
-                'status'    => $request->status,
-                'is_active' => $request->boolean('is_active', $table->is_active),
+                'number'        => $request->number,
+                'name'          => $request->name,
+                'type'          => $request->type,
+                'capacity'      => $request->capacity,
+                'status'        => $request->status,
+                'customer_name' => $request->customer_name,
+                'is_active'     => $request->boolean('is_active', $table->is_active),
             ]);
 
             return response()->json([

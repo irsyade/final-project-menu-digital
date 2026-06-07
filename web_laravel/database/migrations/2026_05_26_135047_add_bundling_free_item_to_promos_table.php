@@ -6,24 +6,23 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    /**
-     * Run the migrations.
-     */
     public function up(): void
     {
         Schema::table('promos', function (Blueprint $table) {
-            $table->text('bundling_items')->nullable()->after('is_active');
-            $table->string('free_item_name')->nullable()->after('bundling_items');
+            if (!Schema::hasColumn('promos', 'bundling_items')) {
+                $table->text('bundling_items')->nullable()->after('is_active');
+            }
+            if (!Schema::hasColumn('promos', 'free_item_name')) {
+                $table->string('free_item_name')->nullable()->after('bundling_items');
+            }
         });
     }
 
-    /**
-     * Reverse the migrations.
-     */
     public function down(): void
     {
         Schema::table('promos', function (Blueprint $table) {
-            $table->dropColumn(['bundling_items', 'free_item_name']);
+            $cols = array_filter(['bundling_items', 'free_item_name'], fn($c) => Schema::hasColumn('promos', $c));
+            if ($cols) $table->dropColumn(array_values($cols));
         });
     }
 };

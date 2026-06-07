@@ -113,13 +113,16 @@
                     </div>
 
                     <div class="flex gap-1">
-                        <a href="{{ route('admin.tables.qr.download', $table->id) }}" class="p-2 bg-white hover:bg-slate-100 text-slate-400 hover:text-brand rounded-xl shadow-sm border border-slate-100 transition">
+                        <button wire:click="showQr({{ $table->id }})" class="p-2 bg-white hover:bg-slate-100 text-slate-400 hover:text-brand rounded-xl shadow-sm border border-slate-100 transition" title="Lihat QR Code">
+                            <i data-lucide="qr-code" class="w-4 h-4"></i>
+                        </button>
+                        <a href="{{ route('admin.tables.qr.download', $table->id) }}" class="p-2 bg-white hover:bg-slate-100 text-slate-400 hover:text-brand rounded-xl shadow-sm border border-slate-100 transition" title="Download QR PDF">
                             <i data-lucide="download" class="w-4 h-4"></i>
                         </a>
-                        <button wire:click="openEdit({{ $table->id }})" class="p-2 bg-white hover:bg-slate-100 text-slate-400 hover:text-blue-500 rounded-xl shadow-sm border border-slate-100 transition">
+                        <button wire:click="openEdit({{ $table->id }})" class="p-2 bg-white hover:bg-slate-100 text-slate-400 hover:text-blue-500 rounded-xl shadow-sm border border-slate-100 transition" title="Edit Meja">
                             <i data-lucide="pencil" class="w-4 h-4"></i>
                         </button>
-                        <button wire:click="delete({{ $table->id }})" onclick="return confirm('Hapus meja ini?')" class="p-2 bg-white hover:bg-slate-100 text-slate-400 hover:text-red-500 rounded-xl shadow-sm border border-slate-100 transition">
+                        <button wire:click="delete({{ $table->id }})" onclick="return confirm('Hapus meja ini?')" class="p-2 bg-white hover:bg-slate-100 text-slate-400 hover:text-red-500 rounded-xl shadow-sm border border-slate-100 transition" title="Hapus Meja">
                             <i data-lucide="trash-2" class="w-4 h-4"></i>
                         </button>
                     </div>
@@ -236,17 +239,6 @@
                             @error('name') <p class="text-xs text-red-500 mt-1">{{ $message }}</p> @enderror
                         </div>
 
-                        {{-- Type --}}
-                        <div>
-                            <label class="block text-sm font-bold text-slate-700 mb-2 px-1">Tipe Ruangan *</label>
-                            <select wire:model="type" class="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-brand outline-none font-bold text-sm transition">
-                                <option value="Regular">Regular (Indoor)</option>
-                                <option value="VIP">VIP Room</option>
-                                <option value="Outdoor">Outdoor / Garden</option>
-                                <option value="Lounge">Lounge / Bar</option>
-                            </select>
-                            @error('type') <p class="text-xs text-red-500 mt-1">{{ $message }}</p> @enderror
-                        </div>
 
                         {{-- Capacity --}}
                         <div>
@@ -288,6 +280,74 @@
                     </button>
                     <button wire:click="$set('showModal', false)" class="px-8 py-5 bg-slate-100 text-slate-600 rounded-2xl font-black text-sm hover:bg-slate-200 transition">BATAL</button>
                 </div>
+            </div>
+        </div>
+    </div>
+    @endif
+
+    {{-- ===================== MODAL VIEW QR ===================== --}}
+    @if($showQrModal)
+    <div
+        x-data="{ show: @entangle('showQrModal') }"
+        x-show="show"
+        x-init="$watch('show', value => { if (value) { $nextTick(() => lucide.createIcons()); } })"
+        x-transition:enter="transition ease-out duration-300"
+        x-transition:enter-start="opacity-0"
+        x-transition:enter-end="opacity-100"
+        x-transition:leave="transition ease-in duration-200"
+        x-transition:leave-start="opacity-100"
+        x-transition:leave-end="opacity-0"
+        class="fixed inset-0 z-[60] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4"
+        style="display: none;">
+        <div
+            x-show="show"
+            x-transition:enter="transition ease-out duration-300"
+            x-transition:enter-start="scale-95 opacity-0"
+            x-transition:enter-end="scale-100 opacity-100"
+            x-transition:leave="transition ease-in duration-200"
+            x-transition:leave-start="scale-100 opacity-100"
+            x-transition:leave-end="scale-95 opacity-0"
+            @click.away="show = false"
+            class="bg-white w-full max-w-md rounded-[2rem] shadow-2xl p-8 overflow-hidden relative border border-slate-100">
+            
+            <!-- Close Button -->
+            <button wire:click="$set('showQrModal', false)" class="absolute top-6 right-6 p-2 bg-slate-50 hover:bg-slate-100 text-slate-400 hover:text-slate-600 rounded-xl transition">
+                <i data-lucide="x" class="w-5 h-5"></i>
+            </button>
+
+            <!-- Title & Info -->
+            <div class="mb-6 pr-10">
+                <h3 class="text-2xl font-black text-slate-900 tracking-tight">QR Code Meja {{ $qrTableNumber }}</h3>
+                <p class="text-sm font-medium text-slate-400 mt-1">{{ $qrTableName ?: 'Pelanggan dapat memindai untuk langsung memesan menu.' }}</p>
+            </div>
+
+            <!-- QR Container -->
+            <div class="flex flex-col items-center justify-center bg-[#F8FAFC] rounded-3xl p-8 border border-slate-100 mb-6">
+                <div class="bg-white p-6 rounded-3xl shadow-sm border border-slate-150 flex items-center justify-center">
+                    {!! \SimpleSoftwareIO\QrCode\Facades\QrCode::size(200)
+                        ->color(15, 23, 42)
+                        ->backgroundColor(255, 255, 255)
+                        ->margin(1)
+                        ->generate('https://menuku.icaadrm.my.id/menu?table=' . urlencode($qrTableNumber)) !!}
+                </div>
+                
+                <div class="mt-6 w-full text-center">
+                    <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none">URL Pemesanan</p>
+                    <p class="text-xs font-bold text-brand mt-2 break-all bg-white px-4 py-2 border border-slate-150 rounded-xl">
+                        https://menuku.icaadrm.my.id/menu?table={{ urlencode($qrTableNumber) }}
+                    </p>
+                </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="flex gap-3">
+                <a href="{{ route('admin.tables.qr.download', $qrTableId) }}" class="flex-1 py-4 bg-brand text-white rounded-xl font-black text-sm shadow-lg shadow-brand/20 hover:opacity-95 transition flex items-center justify-center gap-2">
+                    <i data-lucide="download" class="w-4 h-4"></i>
+                    <span>UNDUH PDF</span>
+                </a>
+                <button wire:click="$set('showQrModal', false)" class="px-6 py-4 bg-slate-100 text-slate-600 rounded-xl font-bold text-sm hover:bg-slate-200 transition">
+                    TUTUP
+                </button>
             </div>
         </div>
     </div>

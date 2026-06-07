@@ -29,7 +29,66 @@ class Cart extends Component
 
     public function mount(string $tableName = ''): void
     {
-        $this->tableName = $tableName;
+        // ── 1. Baca ?table= atau ?meja= dari URL ──────────────────────────────
+        //    Ini HARUS diproses sebelum session supaya scan QR baru selalu menang
+        $tableParam = request()->query('table') ?? request()->query('meja');
+
+        if ($tableParam) {
+            // Ada param di URL → resolve dari DB, simpan ke session
+            $tableModel = \App\Models\Table::where('number', $tableParam)
+                ->orWhere('name', $tableParam)
+                ->first();
+
+            if ($tableModel) {
+                $label = 'Meja ' . $tableModel->number;
+                if ($tableModel->name
+                    && $tableModel->name !== 'Meja ' . $tableModel->number
+                    && $tableModel->name !== $tableModel->number) {
+                    $label .= ' • ' . $tableModel->name;
+                }
+            } else {
+                $label = 'Meja ' . $tableParam;
+            }
+
+            $this->tableName = $label;
+            // Timpa session dengan meja yang baru
+            session()->put('table_name', $label);
+
+        } elseif ($tableName) {
+            // Prop dari blade (Livewire mount prop)
+            $this->tableName = $tableName;
+            session()->put('table_name', $tableName);
+
+        } else {
+            // Tidak ada URL param dan tidak ada prop → ambil dari session (jika ada)
+            $this->tableName = session()->get('table_name', '');
+        }
+
+        // ── 2. Restore state lain dari session ────────────────────────────────
+        $this->items        = session()->get('cart_items', []);
+        $this->customerName = session()->get('customer_name', '');
+        $this->promoCode    = session()->get('promo_code', null);
+        $this->appliedPromo = session()->get('applied_promo', null);
+        $this->promoMessage = session()->get('promo_message', '');
+        $this->promoValid   = session()->get('promo_valid', false);
+        $this->activeScreen = session()->get('active_screen', 'menu');
+    }
+
+    public function updated($propertyName): void
+    {
+        $this->saveToSession();
+    }
+
+    private function saveToSession(): void
+    {
+        session()->put('cart_items', $this->items);
+        session()->put('customer_name', $this->customerName);
+        session()->put('table_name', $this->tableName);
+        session()->put('promo_code', $this->promoCode);
+        session()->put('applied_promo', $this->appliedPromo);
+        session()->put('promo_message', $this->promoMessage);
+        session()->put('promo_valid', $this->promoValid);
+        session()->put('active_screen', $this->activeScreen);
     }
 
     // Called from ProductList via dispatch
@@ -37,6 +96,7 @@ class Cart extends Component
     {
         $key = (string) $productId;
         $this->items[$key] = ($this->items[$key] ?? 0) + 1;
+        $this->saveToSession();
     }
 
     public function updateQty(int $productId, int $qty): void
@@ -47,11 +107,13 @@ class Cart extends Component
         } else {
             $this->items[$key] = $qty;
         }
+        $this->saveToSession();
     }
 
     public function removeItem(int $productId): void
     {
         unset($this->items[(string) $productId]);
+        $this->saveToSession();
     }
 
     public function clearCart(): void
@@ -61,6 +123,7 @@ class Cart extends Component
         $this->appliedPromo = null;
         $this->promoMessage = '';
         $this->promoValid   = false;
+        $this->saveToSession();
     }
 
     public function applyPromoFromBanner(string $code): void
@@ -78,6 +141,7 @@ class Cart extends Component
 
         if (!$this->promoCode) {
             $this->promoMessage = 'Masukkan kode promo terlebih dahulu.';
+            $this->saveToSession();
             return;
         }
 
@@ -87,17 +151,21 @@ class Cart extends Component
 
         if (!$promo) {
             $this->promoMessage = 'Kode promo tidak valid atau sudah tidak aktif.';
+            $this->saveToSession();
             return;
         }
 
-        if ($promo->min_purchase > 0 && $this->subtotal() < $promo->min_purchase) {
+        // Skip min_purchase check for bundling — these promos ARE the product
+        if ($promo->promo_type === 'diskon' && $promo->min_purchase > 0 && $this->subtotal() < $promo->min_purchase) {
             $this->promoMessage = 'Belanja minimum Rp ' . number_format($promo->min_purchase, 0, ',', '.') . ' untuk menggunakan promo ini.';
+            $this->saveToSession();
             return;
         }
 
         $this->appliedPromo = $promo->toArray();
         $this->promoValid   = true;
         $this->promoMessage = 'Promo berhasil diterapkan!';
+        $this->saveToSession();
     }
 
     public function subtotal(): float
@@ -127,8 +195,8 @@ class Cart extends Component
         if (!$this->appliedPromo) return 0;
         $promo = $this->appliedPromo;
 
-        if ($promo['promo_type'] === 'bundling' || $promo['promo_type'] === 'free_item') {
-            return 0; // Bundling/Free item tidak dikurangi dari subtotal sebagai diskon nominal
+        if ($promo['promo_type'] === 'bundling') {
+            return 0; // Bundling tidak dikurangi dari subtotal sebagai diskon nominal
         }
 
         if ($promo['type'] === 'percentage') {
@@ -150,6 +218,7 @@ class Cart extends Component
     public function setScreen(string $screen): void
     {
         $this->activeScreen = $screen;
+        $this->saveToSession();
     }
 
     public function placeOrder(): void
@@ -180,8 +249,6 @@ class Cart extends Component
         if ($this->appliedPromo) {
             if ($this->appliedPromo['promo_type'] === 'bundling') {
                 $promoDesc = "Promo Bundling: " . $this->appliedPromo['name'] . " (" . $this->appliedPromo['bundling_items'] . ")";
-            } elseif ($this->appliedPromo['promo_type'] === 'free_item') {
-                $promoDesc = "Free Item: " . $this->appliedPromo['free_item_name'];
             } else {
                 $promoDesc = "Promo Code: " . $this->appliedPromo['code'];
             }
@@ -224,6 +291,7 @@ class Cart extends Component
 
         $this->clearCart();
         $this->activeScreen = 'status';
+        $this->saveToSession();
     }
 
     // Called every 5s via wire:poll when on status screen

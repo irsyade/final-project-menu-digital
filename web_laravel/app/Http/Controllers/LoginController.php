@@ -20,16 +20,23 @@ class LoginController extends Controller
         ]);
 
         if (Auth::attempt($credentials)) {
-            $request->session()->regenerate();
+            // Cek role — hanya admin yang boleh login ke website
+            if (Auth::user()->role !== 'admin') {
+                Auth::logout();
+                $request->session()->invalidate();
+                $request->session()->regenerateToken();
 
-            if (in_array(Auth::user()->role, ['admin', 'kasir'])) {
-                return redirect()->intended('/admin');
+                return back()->withErrors([
+                    'email' => 'Akses ditolak. Halaman ini hanya untuk Admin. Silakan gunakan aplikasi kasir.',
+                ])->onlyInput('email');
             }
-            return redirect()->intended('/menu');
+
+            $request->session()->regenerate();
+            return redirect()->intended('/admin');
         }
 
         return back()->withErrors([
-            'email' => 'The provided credentials do not match our records.',
+            'email' => 'Email atau password tidak sesuai.',
         ])->onlyInput('email');
     }
 

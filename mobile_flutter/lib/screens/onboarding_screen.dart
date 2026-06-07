@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:lucide_icons/lucide_icons.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:mobile_flutter/constants.dart';
 import 'package:mobile_flutter/screens/login_screen.dart';
 
@@ -47,7 +47,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               return Container(
                 height: MediaQuery.of(context).size.height * (isTablet ? 0.45 : 0.6),
                 width: double.infinity,
-                decoration: const BoxDecoration(
+                decoration: BoxDecoration(
                   color: AppColors.primary,
                   borderRadius: BorderRadius.vertical(
                     bottom: Radius.circular(100),
@@ -140,7 +140,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   }
 
   Widget _buildPage(Map<String, String> page) {
-    bool isTablet = MediaQuery.of(context).size.width > 600;
+    final screenWidth = MediaQuery.of(context).size.width;
+    final screenHeight = MediaQuery.of(context).size.height;
+    bool isTablet = screenWidth > 600;
+    bool isShort = screenHeight < 700;
     IconData iconData;
     switch (page['icon']) {
       case 'qr_code':
@@ -154,13 +157,13 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     }
 
     return Padding(
-      padding: const EdgeInsets.all(32.0),
+      padding: EdgeInsets.all(isShort ? 20 : 32.0),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          SizedBox(height: isTablet ? 0 : 40),
+          SizedBox(height: isTablet ? 0 : (isShort ? 16 : 40)),
           Container(
-            padding: EdgeInsets.all(isTablet ? 30 : 40),
+            padding: EdgeInsets.all(isTablet ? 30 : (isShort ? 28 : 40)),
             decoration: BoxDecoration(
               color: Colors.white,
               shape: BoxShape.circle,
@@ -174,16 +177,16 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             ),
             child: Icon(
               iconData,
-              size: isTablet ? 60 : 80,
+              size: isTablet ? 60 : (isShort ? 50 : 80),
               color: AppColors.primary,
             ),
           ),
-          SizedBox(height: isTablet ? 40 : 80),
+          SizedBox(height: isTablet ? 40 : (isShort ? 32 : 80)),
           Text(
             page['title']!,
             textAlign: TextAlign.center,
             style: GoogleFonts.outfit(
-              fontSize: 24,
+              fontSize: isShort ? 20 : 24,
               fontWeight: FontWeight.w900,
               color: Colors.black,
             ),
@@ -193,7 +196,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             page['description']!,
             textAlign: TextAlign.center,
             style: GoogleFonts.outfit(
-              fontSize: 14,
+              fontSize: isShort ? 13 : 14,
               color: Colors.grey[600],
               height: 1.5,
             ),

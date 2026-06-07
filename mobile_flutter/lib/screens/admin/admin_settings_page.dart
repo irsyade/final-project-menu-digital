@@ -1,8 +1,9 @@
 import 'dart:io';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:lucide_icons/lucide_icons.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:mobile_flutter/constants.dart';
 import 'package:mobile_flutter/controllers/settings_controller.dart';
@@ -28,6 +29,7 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> with SingleTicker
   final _emailController = TextEditingController(text: "admin@warungnusantara.com");
   final _whatsappController = TextEditingController(text: "0812-3456-7890");
   File? _logoImage;
+  File? _qrisImage;
 
   // Jam Operasional State
   final List<Map<String, dynamic>> _operationalHours = [
@@ -65,6 +67,78 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> with SingleTicker
   void initState() {
     super.initState();
     _tabController = TabController(length: 4, vsync: this);
+    
+    // Fetch settings and populate fields
+    _settingsController.fetchSettings().then((_) {
+      _loadSettings();
+    });
+  }
+
+  void _loadSettings() {
+    final s = _settingsController.settings;
+    if (s.isNotEmpty) {
+      setState(() {
+        _nameController.text = s['site_name'] ?? '';
+        _ownerController.text = s['owner_name'] ?? s['account_name'] ?? _authController.user['name'] ?? '';
+        _addressController.text = s['address'] ?? '';
+        _descriptionController.text = s['description'] ?? '';
+        _emailController.text = s['email'] ?? _authController.user['email'] ?? '';
+        _whatsappController.text = s['phone'] ?? '';
+        
+        if (s['primary_color'] != null && s['primary_color'].toString().isNotEmpty) {
+          _selectedColor = s['primary_color'];
+        }
+        
+        if (s['theme'] != null && s['theme'].toString().isNotEmpty) {
+          _selectedTheme = s['theme'];
+        }
+        
+        // Load operational hours from backend structure
+        if (s['operational_hours'] != null) {
+          var hours = s['operational_hours'];
+          if (hours is String) {
+            try {
+              hours = jsonDecode(hours);
+            } catch (e) {
+              print('Error decoding operational_hours string: $e');
+            }
+          }
+          if (hours is List) {
+            for (var item in hours) {
+              final dayName = item['day']?.toString() ?? '';
+              String shortDay = '';
+              if (dayName.startsWith('Sen')) shortDay = 'Sen';
+              else if (dayName.startsWith('Sel')) shortDay = 'Sel';
+              else if (dayName.startsWith('Rab')) shortDay = 'Rab';
+              else if (dayName.startsWith('Kam')) shortDay = 'Kam';
+              else if (dayName.startsWith('Jum')) shortDay = 'Jum';
+              else if (dayName.startsWith('Sab')) shortDay = 'Sab';
+              else if (dayName.startsWith('Min')) shortDay = 'Min';
+              
+              if (shortDay.isNotEmpty) {
+                final target = _operationalHours.firstWhereOrNull((d) => d['day'] == shortDay);
+                if (target != null) {
+                  bool isActive = true;
+                  if (item.containsKey('active')) {
+                    isActive = item['active'] == true || item['active'] == 1;
+                  } else if (item.containsKey('is_closed')) {
+                    isActive = !(item['is_closed'] == true || item['is_closed'] == 1 || item['is_closed'].toString() == 'true');
+                  }
+                  target['active'] = isActive;
+                  target['open'] = (item['open'] != null && item['open'].toString().isNotEmpty) ? item['open'] : '09:00';
+                  target['close'] = (item['close'] != null && item['close'].toString().isNotEmpty) ? item['close'] : '22:00';
+                }
+              }
+            }
+          }
+        }
+        
+        // Load payment methods
+        _paymentMethods['qris'] = s['is_qris_active'] == true || s['is_qris_active'] == 1 || s['is_qris_active'].toString() == 'true';
+        _paymentMethods['transfer'] = s['is_transfer_active'] == true || s['is_transfer_active'] == 1 || s['is_transfer_active'].toString() == 'true';
+        _paymentMethods['cash'] = s['is_cash_active'] == true || s['is_cash_active'] == 1 || s['is_cash_active'].toString() == 'true';
+      });
+    }
   }
 
   @override
@@ -89,35 +163,22 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> with SingleTicker
     }
   }
 
+  Future<void> _pickQrisImage() async {
+    final picker = ImagePicker();
+    final pickedFile = await picker.pickImage(source: ImageSource.gallery);
+    if (pickedFile != null) {
+      setState(() {
+        _qrisImage = File(pickedFile.path);
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Container(
       color: Colors.white,
       child: Column(
         children: [
-          // App Bar like header
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-            child: Row(
-              children: [
-                if (MediaQuery.of(context).size.width <= 900)
-                  IconButton(
-                    icon: const Icon(LucideIcons.menu, color: AppColors.primary),
-                    onPressed: () => Scaffold.of(context).openDrawer(),
-                  ),
-                const Expanded(
-                  child: Center(
-                    child: Text(
-                      'Pengaturan',
-                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: AppColors.slate900),
-                    ),
-                  ),
-                ),
-                if (MediaQuery.of(context).size.width <= 900) const SizedBox(width: 48), // Balancing space
-              ],
-            ),
-          ),
-          
           // TabBar
           TabBar(
             controller: _tabController,
@@ -184,7 +245,7 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> with SingleTicker
                         return ClipRRect(
                           borderRadius: BorderRadius.circular(22),
                           child: Image.network(
-                            '${ApiConstants.baseUrl}/storage/$logo',
+                            '${ApiConstants.baseUrl.replaceAll('/api', '/storage/')}$logo',
                             fit: BoxFit.cover,
                             width: double.infinity,
                             height: double.infinity,
@@ -193,7 +254,7 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> with SingleTicker
                       }
                       return Column(
                         mainAxisAlignment: MainAxisAlignment.center,
-                        children: const [
+                        children: [
                           Icon(LucideIcons.uploadCloud, color: AppColors.primary, size: 28),
                           SizedBox(height: 4),
                           Text('Upload Logo', style: TextStyle(fontSize: 10, color: AppColors.primary, fontWeight: FontWeight.bold)),
@@ -205,7 +266,7 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> with SingleTicker
                     bottom: -8, right: -8,
                     child: Container(
                       padding: const EdgeInsets.all(6),
-                      decoration: const BoxDecoration(color: AppColors.primary, shape: BoxShape.circle),
+                      decoration: BoxDecoration(color: AppColors.primary, shape: BoxShape.circle),
                       child: const Icon(LucideIcons.camera, color: Colors.white, size: 12),
                     ),
                   ),
@@ -234,29 +295,44 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> with SingleTicker
           
           const SizedBox(height: 32),
           
-          SizedBox(
+          Obx(() => SizedBox(
             width: double.infinity,
             child: ElevatedButton(
-              onPressed: () {
-                _settingsController.saveSettings({
-                  'name': _nameController.text,
-                  'owner': _ownerController.text,
-                  'address': _addressController.text,
-                  'description': _descriptionController.text,
-                  'email': _emailController.text,
-                  'whatsapp': _whatsappController.text,
-                }, logoPath: _logoImage?.path);
-                Get.snackbar("Sukses", "Profil toko berhasil disimpan!", backgroundColor: AppColors.success, colorText: Colors.white);
-              },
+              onPressed: _settingsController.isSaving.value
+                  ? null
+                  : () async {
+                      bool success = await _settingsController.saveSettings({
+                        'site_name': _nameController.text,
+                        'owner_name': _ownerController.text,
+                        'address': _addressController.text,
+                        'description': _descriptionController.text,
+                        'email': _emailController.text,
+                        'phone': _whatsappController.text,
+                      }, logoPath: _logoImage?.path);
+                      if (success) {
+                        setState(() {
+                          _logoImage = null; // Reset picked logo image since it's saved
+                        });
+                        _loadSettings();
+                        Get.snackbar("Sukses", "Profil toko berhasil disimpan!", backgroundColor: AppColors.success, colorText: Colors.white);
+                      } else {
+                        Get.snackbar("Gagal", "Gagal menyimpan profil toko", backgroundColor: Colors.red, colorText: Colors.white);
+                      }
+                    },
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.primary,
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
                 elevation: 0,
               ),
-              child: const Text('Simpan Perubahan', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 14)),
+              child: _settingsController.isSaving.value
+                  ? const SizedBox(
+                      height: 20, width: 20,
+                      child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                    )
+                  : const Text('Simpan Perubahan', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 14)),
             ),
-          ),
+          )),
           
           const SizedBox(height: 16),
           
@@ -309,6 +385,14 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> with SingleTicker
                         onChanged: (val) {
                           setState(() {
                             day['active'] = val;
+                            if (val) {
+                              if (day['open'] == null || day['open'].toString().isEmpty) {
+                                day['open'] = '09:00';
+                              }
+                              if (day['close'] == null || day['close'].toString().isEmpty) {
+                                day['close'] = '22:00';
+                              }
+                            }
                           });
                         },
                         activeColor: Colors.white,
@@ -316,9 +400,29 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> with SingleTicker
                       ),
                       const SizedBox(width: 16),
                       if (day['active']) ...[
-                        Expanded(child: _buildTimeField(day['open'], (val) => day['open'] = val)),
+                        Expanded(
+                          child: _buildTimeField(
+                            context,
+                            day['open'],
+                            (val) {
+                              setState(() {
+                                day['open'] = val;
+                              });
+                            },
+                          ),
+                        ),
                         const Padding(padding: EdgeInsets.symmetric(horizontal: 8), child: Text('-', style: TextStyle(color: AppColors.slate400))),
-                        Expanded(child: _buildTimeField(day['close'], (val) => day['close'] = val)),
+                        Expanded(
+                          child: _buildTimeField(
+                            context,
+                            day['close'],
+                            (val) {
+                              setState(() {
+                                day['close'] = val;
+                              });
+                            },
+                          ),
+                        ),
                       ] else ...[
                         const Expanded(child: Center(child: Text('Tutup', style: TextStyle(color: AppColors.slate400, fontWeight: FontWeight.bold)))),
                       ],
@@ -339,10 +443,10 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> with SingleTicker
           child: Column(
             children: [
               Container(
-                padding: const EdgeInsets.all(12),
+                padding: EdgeInsets.all(12),
                 decoration: BoxDecoration(color: AppColors.primary.withOpacity(0.05), borderRadius: BorderRadius.circular(12)),
                 child: Row(
-                  children: const [
+                  children: [
                     Icon(LucideIcons.info, size: 16, color: AppColors.primary),
                     SizedBox(width: 12),
                     Expanded(child: Text('Jam operasional akan ditampilkan di halaman menu digital pelanggan kamu.', style: TextStyle(fontSize: 11, color: AppColors.primary, fontWeight: FontWeight.bold))),
@@ -350,22 +454,54 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> with SingleTicker
                 ),
               ),
               const SizedBox(height: 16),
-              SizedBox(
+              Obx(() => SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
-                  onPressed: () {
-                    _settingsController.saveSettings({'operational_hours': _operationalHours});
-                    Get.snackbar("Sukses", "Jam operasional berhasil disimpan!", backgroundColor: AppColors.success, colorText: Colors.white);
-                  },
+                  onPressed: _settingsController.isSaving.value
+                      ? null
+                      : () async {
+                          final List<Map<String, dynamic>> mappedHours = _operationalHours.map((item) {
+                            String fullDay = '';
+                            switch (item['day']) {
+                              case 'Sen': fullDay = 'Senin'; break;
+                              case 'Sel': fullDay = 'Selasa'; break;
+                              case 'Rab': fullDay = 'Rabu'; break;
+                              case 'Kam': fullDay = 'Kamis'; break;
+                              case 'Jum': fullDay = 'Jumat'; break;
+                              case 'Sab': fullDay = 'Sabtu'; break;
+                              case 'Min': fullDay = 'Minggu'; break;
+                              default: fullDay = item['day'];
+                            }
+                            return {
+                              'day': fullDay,
+                              'open': item['open'] ?? '',
+                              'close': item['close'] ?? '',
+                              'is_closed': !(item['active'] == true),
+                            };
+                          }).toList();
+                          
+                          bool success = await _settingsController.saveSettings({'operational_hours': mappedHours});
+                          if (success) {
+                            _loadSettings();
+                            Get.snackbar("Sukses", "Jam operasional berhasil disimpan!", backgroundColor: AppColors.success, colorText: Colors.white);
+                          } else {
+                            Get.snackbar("Gagal", "Gagal menyimpan jam operasional", backgroundColor: Colors.red, colorText: Colors.white);
+                          }
+                        },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.primary,
                     padding: const EdgeInsets.symmetric(vertical: 16),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
                     elevation: 0,
                   ),
-                  child: const Text('Simpan Jam Operasional', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 14)),
+                  child: _settingsController.isSaving.value
+                      ? const SizedBox(
+                          height: 20, width: 20,
+                          child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                        )
+                      : const Text('Simpan Jam Operasional', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 14)),
                 ),
-              ),
+              )),
             ],
           ),
         ),
@@ -386,6 +522,66 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> with SingleTicker
           const SizedBox(height: 24),
           
           _buildPaymentMethodTile('QRIS', 'GoPay, OVO, Dana, ShopeePay', LucideIcons.qrCode, const Color(0xFFF97316), 'qris'),
+          
+          // QRIS Image Upload Section
+          if (_paymentMethods['qris'] == true) ...[
+            Container(
+              margin: const EdgeInsets.only(bottom: 12),
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFFF7ED),
+                border: Border.all(color: const Color(0xFFFED7AA)),
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(LucideIcons.qrCode, size: 16, color: const Color(0xFFF97316)),
+                      const SizedBox(width: 8),
+                      const Text('Upload QRIS', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w900, color: AppColors.slate900)),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  const Text('Unggah gambar QRIS merchant Anda untuk pembayaran digital', style: TextStyle(fontSize: 11, color: AppColors.slate500, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 16),
+                  GestureDetector(
+                    onTap: _pickQrisImage,
+                    child: Container(
+                      width: double.infinity,
+                      height: 200,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        border: Border.all(color: AppColors.slate200, width: 2, style: BorderStyle.solid),
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: _qrisImage != null
+                          ? ClipRRect(
+                              borderRadius: BorderRadius.circular(14),
+                              child: Image.file(_qrisImage!, fit: BoxFit.contain),
+                            )
+                          : Obx(() {
+                              final qris = _settingsController.settings['qris_image'];
+                              if (qris != null && qris.toString().isNotEmpty) {
+                                return ClipRRect(
+                                  borderRadius: BorderRadius.circular(14),
+                                  child: Image.network(
+                                    '${ApiConstants.baseUrl.replaceAll('/api', '/storage/')}$qris',
+                                    fit: BoxFit.contain,
+                                    errorBuilder: (_, __, ___) => _buildQrisPlaceholder(),
+                                  ),
+                                );
+                              }
+                              return _buildQrisPlaceholder();
+                            }),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+          
           _buildPaymentMethodTile('BRI Virtual Account', 'Transfer via BRI', LucideIcons.creditCard, const Color(0xFFEF4444), 'bri_va'),
           _buildPaymentMethodTile('Transfer Bank', 'BCA, Mandiri, BNI', LucideIcons.landmark, const Color(0xFF3B82F6), 'transfer'),
           _buildPaymentMethodTile('Tunai / Cash', 'Pembayaran langsung di kasir', LucideIcons.banknote, const Color(0xFF10B981), 'cash'),
@@ -422,22 +618,40 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> with SingleTicker
           ),
           
           const SizedBox(height: 32),
-          SizedBox(
+          Obx(() => SizedBox(
             width: double.infinity,
             child: ElevatedButton(
-              onPressed: () {
-                _settingsController.saveSettings({'payment_methods': _paymentMethods});
-                Get.snackbar("Sukses", "Metode transaksi berhasil disimpan!", backgroundColor: AppColors.success, colorText: Colors.white);
-              },
+              onPressed: _settingsController.isSaving.value
+                  ? null
+                  : () async {
+                      bool success = await _settingsController.saveSettings(
+                        {'payment_methods': _paymentMethods},
+                        qrisImagePath: _qrisImage?.path,
+                      );
+                      if (success) {
+                        setState(() {
+                          _qrisImage = null;
+                        });
+                        _loadSettings();
+                        Get.snackbar("Sukses", "Metode transaksi berhasil disimpan!", backgroundColor: AppColors.success, colorText: Colors.white);
+                      } else {
+                        Get.snackbar("Gagal", "Gagal menyimpan metode transaksi", backgroundColor: Colors.red, colorText: Colors.white);
+                      }
+                    },
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.primary,
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
                 elevation: 0,
               ),
-              child: const Text('Simpan Metode Pembayaran', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 14)),
+              child: _settingsController.isSaving.value
+                  ? const SizedBox(
+                      height: 20, width: 20,
+                      child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                    )
+                  : const Text('Simpan Metode Pembayaran', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 14)),
             ),
-          ),
+          )),
         ],
       ),
     );
@@ -539,7 +753,7 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> with SingleTicker
           ),
         ),
         
-        Container(
+        Obx(() => Container(
           padding: const EdgeInsets.all(24),
           decoration: BoxDecoration(
             color: Colors.white,
@@ -548,28 +762,54 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> with SingleTicker
           child: SizedBox(
             width: double.infinity,
             child: ElevatedButton(
-              onPressed: () {
-                _settingsController.saveSettings({
-                  'color': _selectedColor,
-                  'theme': _selectedTheme,
-                });
-                Get.snackbar("Sukses", "Tema & Warna berhasil diterapkan!", backgroundColor: AppColors.success, colorText: Colors.white);
-              },
+              onPressed: _settingsController.isSaving.value
+                  ? null
+                  : () async {
+                      bool success = await _settingsController.saveSettings({
+                        'color': _selectedColor,
+                        'theme': _selectedTheme,
+                      });
+                      if (success) {
+                        _loadSettings();
+                        Get.snackbar("Sukses", "Tema & Warna berhasil diterapkan!", backgroundColor: AppColors.success, colorText: Colors.white);
+                      } else {
+                        Get.snackbar("Gagal", "Gagal menyimpan tema & warna", backgroundColor: Colors.red, colorText: Colors.white);
+                      }
+                    },
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.primary,
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
                 elevation: 0,
               ),
-              child: const Text('Terapkan Tema', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 14)),
+              child: _settingsController.isSaving.value
+                  ? const SizedBox(
+                      height: 20, width: 20,
+                      child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                    )
+                  : const Text('Terapkan Tema', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 14)),
             ),
           ),
-        ),
+        )),
       ],
     );
   }
 
   // === HELPERS ===
+  Widget _buildQrisPlaceholder() {
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Icon(LucideIcons.uploadCloud, color: const Color(0xFFF97316), size: 36),
+        const SizedBox(height: 8),
+        const Text('Upload QRIS Image', style: TextStyle(fontSize: 12, color: Color(0xFFF97316), fontWeight: FontWeight.bold)),
+        const SizedBox(height: 4),
+        const Text('Tap untuk upload gambar QRIS', style: TextStyle(fontSize: 10, color: AppColors.slate400)),
+        const Text('Format: JPG, PNG (max 2MB)', style: TextStyle(fontSize: 9, color: AppColors.slate400)),
+      ],
+    );
+  }
+
   Widget _buildSectionTitle(String title) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 16),
@@ -603,11 +843,67 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> with SingleTicker
     );
   }
 
-  Widget _buildTimeField(String initialValue, Function(String) onChanged) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      decoration: BoxDecoration(color: AppColors.slate50, borderRadius: BorderRadius.circular(12)),
-      child: Text(initialValue, textAlign: TextAlign.center, style: const TextStyle(fontWeight: FontWeight.bold)),
+  Future<void> _selectTime(BuildContext context, String initialTime, Function(String) onChanged) async {
+    final parts = initialTime.split(':');
+    int hour = 9;
+    int minute = 0;
+    if (parts.length == 2) {
+      hour = int.tryParse(parts[0]) ?? 9;
+      minute = int.tryParse(parts[1]) ?? 0;
+    }
+    
+    final TimeOfDay? picked = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay(hour: hour, minute: minute),
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: ColorScheme.light(
+              primary: AppColors.primary,
+              onPrimary: Colors.white,
+              onSurface: AppColors.slate900,
+            ),
+            textButtonTheme: TextButtonThemeData(
+              style: TextButton.styleFrom(
+                foregroundColor: AppColors.primary,
+              ),
+            ),
+          ),
+          child: child!,
+        );
+      },
+    );
+    
+    if (picked != null) {
+      final hourStr = picked.hour.toString().padLeft(2, '0');
+      final minuteStr = picked.minute.toString().padLeft(2, '0');
+      onChanged('$hourStr:$minuteStr');
+    }
+  }
+
+  Widget _buildTimeField(BuildContext context, String initialValue, Function(String) onChanged) {
+    return GestureDetector(
+      onTap: () => _selectTime(context, initialValue, onChanged),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(
+          color: AppColors.slate50,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: AppColors.slate200, width: 1),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(LucideIcons.clock, size: 14, color: AppColors.slate400),
+            const SizedBox(width: 8),
+            Text(
+              initialValue.isNotEmpty ? initialValue : '--:--',
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.slate700),
+            ),
+          ],
+        ),
+      ),
     );
   }
 

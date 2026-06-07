@@ -18,6 +18,7 @@ class SettingsManagement extends Component
 
     // Tab 1: Informasi Restoran
     public $site_name;
+    public $owner_name;
     public $phone;
     public $email;
     public $address;
@@ -44,6 +45,7 @@ class SettingsManagement extends Component
 
     protected $rules = [
         'site_name' => 'required|string|max:255',
+        'owner_name' => 'nullable|string|max:255',
         'phone' => 'nullable|string|max:50',
         'email' => 'nullable|email|max:100',
         'address' => 'nullable|string',
@@ -71,6 +73,7 @@ class SettingsManagement extends Component
 
         // Tab 1
         $this->site_name = $this->setting->site_name ?? 'Warung MenuKu';
+        $this->owner_name = $this->setting->owner_name ?? 'Pemilik Restoran';
         $this->phone = $this->setting->phone ?? '021-7234567';
         $this->email = $this->setting->email ?? 'admin@menuku.id';
         $this->address = $this->setting->address ?? 'Jl. Digital Raya No. 404, Jakarta Selatan';
@@ -152,6 +155,7 @@ class SettingsManagement extends Component
 
         // Save attributes
         $this->setting->site_name = $this->site_name;
+        $this->setting->owner_name = $this->owner_name;
         $this->setting->phone = $this->phone;
         $this->setting->email = $this->email;
         $this->setting->address = $this->address;
@@ -169,7 +173,7 @@ class SettingsManagement extends Component
         $this->setting->save();
 
         session()->flash('success', 'Perubahan berhasil disimpan!');
-        $this->dispatch('settings-saved');
+        $this->dispatch('settings-saved', ownerName: $this->owner_name);
     }
 
     public function render()

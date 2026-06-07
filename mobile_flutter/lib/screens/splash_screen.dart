@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:lucide_icons/lucide_icons.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:mobile_flutter/constants.dart';
 import 'package:mobile_flutter/controllers/auth_controller.dart';
 import 'package:mobile_flutter/screens/login_screen.dart';
@@ -120,7 +120,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                         ),
                       ],
                     ),
-                    child: const Icon(
+                    child: Icon(
                       LucideIcons.utensilsCrossed,
                       size: 60,
                       color: AppColors.primary,

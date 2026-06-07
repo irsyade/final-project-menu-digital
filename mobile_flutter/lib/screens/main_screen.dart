@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:lucide_icons/lucide_icons.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:mobile_flutter/constants.dart';
 import 'package:mobile_flutter/controllers/auth_controller.dart';
 import 'package:mobile_flutter/screens/login_screen.dart';

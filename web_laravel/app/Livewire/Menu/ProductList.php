@@ -37,9 +37,6 @@ class ProductList extends Component
     {
         $products = Product::with('category')
             ->where('is_available', true)
-            ->when($this->search, fn($q) => $q->where('name', 'like', "%{$this->search}%"))
-            ->when($this->activeCategory, fn($q) => $q->where('category_id', $this->activeCategory))
-            ->when($this->activeCuisine, fn($q) => $q->where('cuisine', $this->activeCuisine))
             ->latest()
             ->get();
 

@@ -1,23 +1,36 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:lucide_icons/lucide_icons.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:intl/intl.dart';
 import 'package:mobile_flutter/constants.dart';
 import 'package:mobile_flutter/controllers/pos_cart_controller.dart';
 import 'package:mobile_flutter/controllers/kasir_controller.dart';
 import 'package:mobile_flutter/controllers/product_controller.dart';
 import 'package:mobile_flutter/controllers/table_controller.dart';
+import 'package:mobile_flutter/utils/debounce.dart';
+import 'package:mobile_flutter/widgets/shimmer_loader.dart';
 
-class TransaksiBaruPage extends StatelessWidget {
+class TransaksiBaruPage extends StatefulWidget {
   TransaksiBaruPage({super.key});
 
-  // final currencyFormatter = NumberFormat.currency(locale: 'id_ID', symbol: 'Rp ', decimalDigits: 0);
+  @override
+  State<TransaksiBaruPage> createState() => _TransaksiBaruPageState();
+}
 
+class _TransaksiBaruPageState extends State<TransaksiBaruPage> {
   final ProductController productController = Get.find<ProductController>();
   final TableController tableController = Get.put(TableController());
   final RxInt activeCategoryIndex = 0.obs;
   final RxString searchQuery = "".obs;
+  final _searchDebounce = Debounce(const Duration(milliseconds: 400));
+  final TextEditingController _searchTextController = TextEditingController();
+
+  @override
+  void dispose() {
+    _searchDebounce.dispose();
+    _searchTextController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -123,7 +136,12 @@ class TransaksiBaruPage extends StatelessWidget {
 
   Widget _buildTopHeader(PosCartController cartController) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(24, 32, 24, 24),
+      padding: EdgeInsets.fromLTRB(
+        MediaQuery.of(context).size.width < 360 ? 12 : 16,
+        16, 
+        MediaQuery.of(context).size.width < 360 ? 12 : 16,
+        12,
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -134,7 +152,7 @@ class TransaksiBaruPage extends StatelessWidget {
                 "Transaksi Baru",
                 style: GoogleFonts.outfit(
                   fontWeight: FontWeight.w900,
-                  fontSize: 28,
+                  fontSize: MediaQuery.of(context).size.width < 360 ? 18 : 22,
                   color: AppColors.slate900,
                 ),
               ),
@@ -180,9 +198,9 @@ class TransaksiBaruPage extends StatelessWidget {
               )),
             ],
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: 16),
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
+            padding: const EdgeInsets.symmetric(horizontal: 16),
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(16),
@@ -195,7 +213,13 @@ class TransaksiBaruPage extends StatelessWidget {
               ],
             ),
             child: TextField(
-              onChanged: (val) => searchQuery.value = val,
+              controller: _searchTextController,
+              onChanged: (val) {
+                searchQuery.value = val;
+                _searchDebounce.run(() {
+                  productController.searchProductsDebounced(val);
+                });
+              },
               decoration: InputDecoration(
                 hintText: "Cari menu...",
                 hintStyle: GoogleFonts.outfit(color: AppColors.slate400, fontWeight: FontWeight.bold),
@@ -274,132 +298,183 @@ class TransaksiBaruPage extends StatelessWidget {
 
   Widget _buildProductGrid(PosCartController cartController) {
     return Obx(() {
+      // Show shimmer during initial load OR debounced search
+      if (productController.isLoading.value || productController.isSearching.value) {
+        return LayoutBuilder(
+          builder: (context, constraints) {
+            final crossCount = constraints.maxWidth > 900 ? 4 : (constraints.maxWidth < 400 ? 2 : 3);
+            return ProductGridShimmer(count: crossCount * 2, crossAxisCount: crossCount);
+          },
+        );
+      }
+
       final filteredProducts = productController.products.where((p) {
         final matchesSearch = p.name.toLowerCase().contains(searchQuery.value.toLowerCase());
         return matchesSearch;
       }).toList();
 
-      if (productController.isLoading.value) {
-        return const Center(child: CircularProgressIndicator(color: AppColors.primary));
+      if (filteredProducts.isEmpty) {
+        return Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(LucideIcons.searchX, size: 56, color: AppColors.slate200),
+              const SizedBox(height: 16),
+              Text(
+                "Menu tidak ditemukan",
+                style: GoogleFonts.outfit(color: AppColors.slate400, fontWeight: FontWeight.bold, fontSize: 15),
+              ),
+            ],
+          ),
+        );
       }
 
-      return GridView.builder(
-        padding: const EdgeInsets.fromLTRB(24, 0, 24, 100),
-        physics: const BouncingScrollPhysics(),
-        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 3,
-          childAspectRatio: 0.82,
-          crossAxisSpacing: 20,
-          mainAxisSpacing: 20,
-        ),
-        itemCount: filteredProducts.length,
-        itemBuilder: (context, index) {
-          final product = filteredProducts[index];
-          bool isHabis = !product.isAvailable;
+      return LayoutBuilder(
+        builder: (context, constraints) {
+          // Responsive: 2 columns on narrow mobile (<400px), 3 on wider
+          final crossCount = constraints.maxWidth < 400 ? 2 : 3;
+          final cardRadius = constraints.maxWidth < 400 ? 20.0 : 28.0;
+          final childAspectRatio = constraints.maxWidth < 360
+              ? 0.70
+              : (constraints.maxWidth < 400 ? 0.75 : 0.78);
 
-          return Container(
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(32),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.03),
-                  blurRadius: 20,
-                  offset: const Offset(0, 10),
-                ),
-              ],
+          return GridView.builder(
+            padding: EdgeInsets.fromLTRB(
+              constraints.maxWidth < 360 ? 12 : 16,
+              0,
+              constraints.maxWidth < 360 ? 12 : 16,
+              100,
             ),
-            clipBehavior: Clip.antiAlias,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Product Image
-                Expanded(
-                  child: Stack(
-                    fit: StackFit.expand,
-                    children: [
-                      _buildProductImage(product),
-                      if (isHabis)
-                        Container(
-                          color: Colors.black.withOpacity(0.3),
-                          child: Center(
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                              decoration: BoxDecoration(
-                                color: Colors.white.withOpacity(0.9),
-                                borderRadius: BorderRadius.circular(16),
-                              ),
-                              child: Text(
-                                "HABIS", 
-                                style: GoogleFonts.outfit(
-                                  fontWeight: FontWeight.w900, 
-                                  fontSize: 12, 
-                                  color: AppColors.warning,
-                                  letterSpacing: 1,
-                                )
+            physics: const BouncingScrollPhysics(),
+            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: crossCount,
+              childAspectRatio: childAspectRatio,
+              crossAxisSpacing: constraints.maxWidth < 360 ? 8 : 12,
+              mainAxisSpacing: constraints.maxWidth < 360 ? 8 : 12,
+            ),
+            itemCount: filteredProducts.length,
+            itemBuilder: (context, index) {
+              final product = filteredProducts[index];
+              bool isHabis = !product.isAvailable;
+
+              return Container(
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(cardRadius),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.03),
+                      blurRadius: 16,
+                      offset: const Offset(0, 6),
+                    ),
+                  ],
+                ),
+                clipBehavior: Clip.antiAlias,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Product Image — flexible height
+                    Expanded(
+                      flex: 6,
+                      child: Stack(
+                        fit: StackFit.expand,
+                        children: [
+                          _buildProductImage(product),
+                          if (isHabis)
+                            Container(
+                              color: Colors.black.withOpacity(0.35),
+                              child: Center(
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withOpacity(0.92),
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: Text(
+                                    "HABIS",
+                                    style: GoogleFonts.outfit(
+                                      fontWeight: FontWeight.w900,
+                                      fontSize: 11,
+                                      color: AppColors.warning,
+                                      letterSpacing: 0.8,
+                                    ),
+                                  ),
+                                ),
                               ),
                             ),
-                          ),
-                        ),
-                    ],
-                  ),
-                ),
-                
-                // Product Info
-                Padding(
-                  padding: const EdgeInsets.all(20),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      Expanded(
+                        ],
+                      ),
+                    ),
+
+                    // Product Info — compact padding
+                    Expanded(
+                      flex: 4,
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(10, 8, 8, 8),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
+                            // Name
                             Text(
                               product.name,
-                              maxLines: 1,
+                              maxLines: 2,
                               overflow: TextOverflow.ellipsis,
                               style: GoogleFonts.outfit(
-                                fontWeight: FontWeight.w900, 
-                                fontSize: 16,
+                                fontWeight: FontWeight.w900,
+                                fontSize: 12,
                                 color: AppColors.slate800,
+                                height: 1.2,
                               ),
                             ),
-                            const SizedBox(height: 6),
-                            Text(
-                              CurrencyFormat.convertToIdr(product.price, 0),
-                              style: GoogleFonts.outfit(
-                                fontWeight: FontWeight.w900, 
-                                color: AppColors.slate900, 
-                                fontSize: 15,
-                              ),
+                            // Price + Add button row
+                            Row(
+                              crossAxisAlignment: CrossAxisAlignment.center,
+                              children: [
+                                Expanded(
+                                  child: Text(
+                                    CurrencyFormat.convertToIdr(product.price, 0),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: GoogleFonts.outfit(
+                                      fontWeight: FontWeight.w900,
+                                      color: AppColors.slate900,
+                                      fontSize: 11,
+                                    ),
+                                  ),
+                                ),
+                                GestureDetector(
+                                  onTap: isHabis ? null : () => cartController.addItem(product.id, product.name, product.price),
+                                  child: Container(
+                                    padding: const EdgeInsets.all(6),
+                                    decoration: BoxDecoration(
+                                      color: isHabis ? AppColors.slate100 : AppColors.primary,
+                                      shape: BoxShape.circle,
+                                      boxShadow: isHabis ? [] : [
+                                        BoxShadow(
+                                          color: AppColors.primary.withOpacity(0.3),
+                                          blurRadius: 6,
+                                          offset: const Offset(0, 3),
+                                        )
+                                      ],
+                                    ),
+                                    child: Icon(
+                                      LucideIcons.plus,
+                                      size: 14,
+                                      color: isHabis ? AppColors.slate300 : Colors.white,
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
                           ],
                         ),
                       ),
-                      GestureDetector(
-                        onTap: isHabis ? null : () => cartController.addItem(product.id, product.name, product.price),
-                        child: Container(
-                          padding: const EdgeInsets.all(10),
-                          decoration: BoxDecoration(
-                            color: isHabis ? AppColors.slate100 : AppColors.primary,
-                            shape: BoxShape.circle,
-                            boxShadow: isHabis ? [] : [
-                              BoxShadow(
-                                color: AppColors.primary.withOpacity(0.3),
-                                blurRadius: 8,
-                                offset: const Offset(0, 4),
-                              )
-                            ],
-                          ),
-                          child: Icon(LucideIcons.plus, size: 18, color: isHabis ? AppColors.slate300 : Colors.white),
-                        ),
-                      ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
-              ],
-            ),
+              );
+            },
           );
         },
       );
@@ -407,9 +482,14 @@ class TransaksiBaruPage extends StatelessWidget {
   }
 
   Widget _buildOrderPanel(PosCartController cartController, KasirController kasirController) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isSmall = screenWidth < 360;
     return Container(
       color: Colors.white,
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+      padding: EdgeInsets.symmetric(
+        horizontal: isSmall ? 16 : 24,
+        vertical: isSmall ? 20 : 32,
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -417,7 +497,7 @@ class TransaksiBaruPage extends StatelessWidget {
             "Pesanan", 
             style: GoogleFonts.outfit(
               fontWeight: FontWeight.w900, 
-              fontSize: 24,
+              fontSize: isSmall ? 20 : 24,
               color: AppColors.slate900,
             )
           ),
@@ -503,7 +583,7 @@ class TransaksiBaruPage extends StatelessWidget {
                               onTap: () => cartController.addItem(item.id, item.name, item.price),
                               child: Container(
                                 padding: const EdgeInsets.all(4),
-                                decoration: const BoxDecoration(
+                                decoration: BoxDecoration(
                                   color: AppColors.primary, 
                                   shape: BoxShape.circle,
                                 ),
@@ -584,7 +664,7 @@ class TransaksiBaruPage extends StatelessWidget {
                 }
               },
               style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(vertical: 22),
+                padding: EdgeInsets.symmetric(vertical: isSmall ? 16 : 22),
                 backgroundColor: AppColors.primary,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
                 elevation: 15,
@@ -594,7 +674,7 @@ class TransaksiBaruPage extends StatelessWidget {
                 "Lanjut ke Pembayaran", 
                 style: GoogleFonts.outfit(
                   fontWeight: FontWeight.w900, 
-                  fontSize: 18, 
+                  fontSize: isSmall ? 15 : 18, 
                   letterSpacing: 0.5,
                   color: Colors.white,
                 )

@@ -1,11 +1,10 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:mobile_flutter/models/table.dart';
-import 'package:mobile_flutter/services/api_service.dart';
+import 'package:mobile_flutter/services/table_service.dart';
 
 class TableController extends GetxController {
-  final ApiService _apiService = ApiService();
+  final TableService _tableService = TableService();
 
   var isLoading = false.obs;
   var tables = <TableModel>[].obs;
@@ -19,15 +18,7 @@ class TableController extends GetxController {
   Future<void> fetchTables() async {
     isLoading(true);
     try {
-      final response = await _apiService.get('/tables');
-      if (response.statusCode == 200) {
-        final List data = jsonDecode(response.body);
-        tables.value = data.map((e) => TableModel.fromJson(e)).toList();
-      } else if (response.statusCode == 401) {
-        // Silently ignore if unauthenticated (e.g., on app start)
-      } else {
-        print("Error fetching tables: ${response.statusCode} ${response.body}");
-      }
+      tables.value = await _tableService.getTables();
     } catch (e) {
       print("Error fetching tables: $e");
     } finally {
@@ -38,16 +29,11 @@ class TableController extends GetxController {
   Future<Map<String, dynamic>> createTable(Map<String, dynamic> data) async {
     isLoading(true);
     try {
-      final response = await _apiService.post('/tables', data);
-      final body = jsonDecode(response.body);
-      if (response.statusCode == 200 || response.statusCode == 201) {
+      final result = await _tableService.createTable(data);
+      if (result['success'] == true) {
         await fetchTables();
-        return {"success": true};
       }
-      return {
-        "success": false,
-        "message": body['message'] ?? "Gagal menambah meja (${response.statusCode})"
-      };
+      return result;
     } catch (e) {
       return {"success": false, "message": "Terjadi kesalahan: $e"};
     } finally {
@@ -58,16 +44,11 @@ class TableController extends GetxController {
   Future<Map<String, dynamic>> updateTable(int id, Map<String, dynamic> data) async {
     isLoading(true);
     try {
-      final response = await _apiService.put('/tables/$id', data);
-      final body = jsonDecode(response.body);
-      if (response.statusCode == 200) {
+      final result = await _tableService.updateTable(id, data);
+      if (result['success'] == true) {
         await fetchTables();
-        return {"success": true};
       }
-      return {
-        "success": false,
-        "message": body['message'] ?? "Gagal memperbarui meja (${response.statusCode})"
-      };
+      return result;
     } catch (e) {
       return {"success": false, "message": "Terjadi kesalahan: $e"};
     } finally {
@@ -78,13 +59,11 @@ class TableController extends GetxController {
   Future<bool> deleteTable(int id) async {
     isLoading(true);
     try {
-      final response = await _apiService.delete('/tables/$id');
-      if (response.statusCode == 200) {
+      final success = await _tableService.deleteTable(id);
+      if (success) {
         await fetchTables();
-        return true;
       }
-      print("Delete failed: ${response.statusCode} ${response.body}");
-      return false;
+      return success;
     } catch (e) {
       print("Error deleting table: $e");
       return false;
@@ -99,7 +78,7 @@ class TableController extends GetxController {
       final table = tables.firstWhereOrNull((t) => t.id == id);
       if (table == null) return;
 
-      final response = await _apiService.put('/tables/$id', {
+      final result = await _tableService.updateTable(id, {
         'number': table.number,
         'name': table.name ?? '',
         'type': table.type,
@@ -108,15 +87,42 @@ class TableController extends GetxController {
         'is_active': newIsActive,
       });
 
-      if (response.statusCode == 200) {
+      if (result['success'] == true) {
         await fetchTables();
       } else {
-        print("Toggle failed: ${response.statusCode} ${response.body}");
+        print("Toggle failed: ${result['message']}");
         Get.snackbar("Gagal", "Tidak dapat mengubah status meja",
             backgroundColor: const Color(0xFFEF4444), colorText: const Color(0xFFFFFFFF));
       }
     } catch (e) {
       print("Error toggling table: $e");
+    }
+  }
+
+  /// Update status ketersediaan meja (available, occupied, reserved)
+  Future<void> updateTableStatus(int id, String newStatus) async {
+    try {
+      final table = tables.firstWhereOrNull((t) => t.id == id);
+      if (table == null) return;
+
+      final result = await _tableService.updateTable(id, {
+        'number': table.number,
+        'name': table.name ?? '',
+        'type': table.type,
+        'capacity': table.capacity,
+        'status': newStatus,
+        'is_active': table.isActive,
+      });
+
+      if (result['success'] == true) {
+        await fetchTables();
+      } else {
+        print("Status update failed: ${result['message']}");
+        Get.snackbar("Gagal", "Tidak dapat mengubah status meja",
+            backgroundColor: const Color(0xFFEF4444), colorText: const Color(0xFFFFFFFF));
+      }
+    } catch (e) {
+      print("Error updating status table: $e");
     }
   }
 }

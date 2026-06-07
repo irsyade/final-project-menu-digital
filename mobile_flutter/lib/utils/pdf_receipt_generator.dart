@@ -15,13 +15,16 @@ class PdfReceiptGenerator {
       );
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
+        // Handle both response formats: {success: true, data: {...}} and direct {...}
+        final settings = data['success'] == true ? data['data'] : data;
         return {
-          'site_name': data['site_name'] ?? 'MenuKu Resto',
-          'address': data['address'] ?? 'Jl. Digital Menu No. 123',
+          'site_name': settings['site_name'] ?? 'MenuKu Resto',
+          'address': settings['address'] ?? 'Jl. Digital Menu No. 123',
+          'phone': settings['phone'] ?? '',
         };
       }
     } catch (_) {}
-    return {'site_name': 'MenuKu Resto', 'address': 'Jl. Digital Menu No. 123'};
+    return {'site_name': 'MenuKu Resto', 'address': 'Jl. Digital Menu No. 123', 'phone': ''};
   }
 
   static Future<Uint8List> generateReceipt({
@@ -40,6 +43,7 @@ class PdfReceiptGenerator {
     final storeInfo = await _fetchStoreInfo();
     final storeName = storeInfo['site_name']!;
     final storeAddress = storeInfo['address']!;
+    final storePhone = storeInfo['phone']!;
 
     final pdf = pw.Document();
 
@@ -55,6 +59,10 @@ class PdfReceiptGenerator {
               pw.Text(storeName, style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 16)),
               pw.SizedBox(height: 2),
               pw.Text(storeAddress, style: const pw.TextStyle(fontSize: 10), textAlign: pw.TextAlign.center),
+              if (storePhone.isNotEmpty) ...[
+                pw.SizedBox(height: 1),
+                pw.Text(storePhone, style: const pw.TextStyle(fontSize: 10), textAlign: pw.TextAlign.center),
+              ],
               pw.SizedBox(height: 8),
               _separator(),
               pw.SizedBox(height: 8),

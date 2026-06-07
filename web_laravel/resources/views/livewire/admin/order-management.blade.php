@@ -48,7 +48,9 @@
                         <th class="px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Items</th>
                         <th class="px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Total</th>
                         <th class="px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Status</th>
-                        <th class="px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Aksi</th>
+                        @if(Auth::user()->role === 'kasir')
+                            <th class="px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Aksi</th>
+                        @endif
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-100">
@@ -88,20 +90,22 @@
                         <td class="px-6 py-5 text-center">
                             <span class="px-3 py-1 text-[10px] font-black uppercase rounded-lg {{ $badgeClass }}">{{ $order->status }}</span>
                         </td>
-                        <td class="px-6 py-5 text-right">
-                            <select
-                                onchange="@this.call('updateStatus', {{ $order->id }}, this.value)"
-                                class="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 outline-none focus:ring-2 focus:ring-brand transition cursor-pointer">
-                                <option value="pending"    {{ $order->status === 'pending'    ? 'selected' : '' }}>Pending</option>
-                                <option value="processing" {{ $order->status === 'processing' ? 'selected' : '' }}>Diproses</option>
-                                <option value="completed"  {{ $order->status === 'completed'  ? 'selected' : '' }}>Selesai</option>
-                                <option value="cancelled"  {{ $order->status === 'cancelled'  ? 'selected' : '' }}>Batal</option>
-                            </select>
-                        </td>
+                        @if(Auth::user()->role === 'kasir')
+                            <td class="px-6 py-5 text-right">
+                                <select
+                                    onchange="@this.call('updateStatus', {{ $order->id }}, this.value)"
+                                    class="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 outline-none focus:ring-2 focus:ring-brand transition cursor-pointer">
+                                    <option value="pending"    {{ $order->status === 'pending'    ? 'selected' : '' }}>Pending</option>
+                                    <option value="processing" {{ $order->status === 'processing' ? 'selected' : '' }}>Diproses</option>
+                                    <option value="completed"  {{ $order->status === 'completed'  ? 'selected' : '' }}>Selesai</option>
+                                    <option value="cancelled"  {{ $order->status === 'cancelled'  ? 'selected' : '' }}>Batal</option>
+                                </select>
+                            </td>
+                        @endif
                     </tr>
                     @empty
                     <tr>
-                        <td colspan="6" class="px-8 py-20 text-center">
+                        <td colspan="{{ Auth::user()->role === 'admin' ? 5 : 6 }}" class="px-8 py-20 text-center">
                             <div class="flex flex-col items-center text-slate-200">
                                 <i data-lucide="package-search" class="w-12 h-12 mb-3"></i>
                                 <p class="font-black uppercase tracking-widest text-[10px]">Tidak ada pesanan ditemukan</p>

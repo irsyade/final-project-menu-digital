@@ -113,4 +113,54 @@ class ApiService {
       throw Exception('MULTIPART ERROR: $e');
     }
   }
+
+  /// ================= MULTIPART POST (Multiple Files) =================
+  Future<http.StreamedResponse> postMultipartMultiFiles(
+    String endpoint,
+    Map<String, String> fields, {
+    Map<String, String>? files,
+  }) async {
+    try {
+      final request = http.MultipartRequest('POST', Uri.parse('${ApiConstants.baseUrl}$endpoint'));
+      
+      final headers = await _getHeaders();
+      headers.remove('Content-Type');
+      request.headers.addAll(headers);
+
+      request.fields.addAll(fields);
+
+      if (files != null) {
+        for (final entry in files.entries) {
+          if (entry.value.isNotEmpty) {
+            request.files.add(await http.MultipartFile.fromPath(entry.key, entry.value));
+          }
+        }
+      }
+
+      return await request.send();
+    } catch (e) {
+      throw Exception('MULTIPART ERROR: $e');
+    }
+  }
+
+  /// ================= GET (Raw bytes for file downloads) =================
+  Future<http.Response> getRaw(String endpoint) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('token');
+
+      final response = await http.get(
+        Uri.parse('${ApiConstants.baseUrl}$endpoint'),
+        headers: {
+          'Accept': '*/*',
+          if (token != null && token.isNotEmpty)
+            'Authorization': 'Bearer $token',
+        },
+      );
+
+      return response;
+    } catch (e) {
+      throw Exception('GET RAW ERROR: $e');
+    }
+  }
 }

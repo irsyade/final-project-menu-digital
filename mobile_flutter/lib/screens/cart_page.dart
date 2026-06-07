@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:lucide_icons/lucide_icons.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:mobile_flutter/constants.dart';
 import 'package:mobile_flutter/controllers/cart_controller.dart';
 import 'package:mobile_flutter/screens/checkout_page.dart';
@@ -95,7 +95,7 @@ class CartPage extends StatelessWidget {
                               const SizedBox(height: 4),
                               Text(
                                 CurrencyFormat.convertToIdr(item.product.price, 0),
-                                style: const TextStyle(
+                                style: TextStyle(
                                   fontWeight: FontWeight.w900,
                                   color: AppColors.primary,
                                 ),
@@ -179,7 +179,7 @@ class CartPage extends StatelessWidget {
                         ),
                         Text(
                           CurrencyFormat.convertToIdr(controller.total, 0),
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 20,
                             fontWeight: FontWeight.w900,
                             color: AppColors.primary,

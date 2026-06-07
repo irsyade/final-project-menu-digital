@@ -1,11 +1,27 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:intl/intl.dart' as intl;
+import 'package:get/get.dart';
+import 'package:mobile_flutter/controllers/settings_controller.dart';
 
 class AppColors {
   // Brand Colors
-  static const Color primary = Color(0xFFE8781A); // Brand Orange (Claude Prompt)
-  static const Color primaryLight = Color(0xFFFFF7ED);
+  static Color get primary {
+    try {
+      if (Get.isRegistered<SettingsController>()) {
+        final settingsController = Get.find<SettingsController>();
+        final hexColor = settingsController.settings['primary_color'] ?? settingsController.settings['color'];
+        if (hexColor != null && hexColor.toString().isNotEmpty) {
+          return Color(int.parse(hexColor.toString().replaceAll('#', '0xFF')));
+        }
+      }
+    } catch (_) {}
+    return const Color(0xFFE8781A); // Fallback
+  }
+
+  static Color get primaryLight {
+    return primary.withOpacity(0.05);
+  }
   
   // Slate Scale (Matching Tailwind Slate)
   static const Color slate900 = Color(0xFF0F172A);
@@ -59,11 +75,17 @@ class AppDesign {
 }
 
 class ApiConstants {
+  static String? _customBaseUrl;
+
+  static void setCustomBaseUrl(String? url) {
+    _customBaseUrl = url;
+  }
+
   static String get baseUrl {
-    if (kIsWeb) {
-      return 'http://localhost:8000/api';
+    if (_customBaseUrl != null && _customBaseUrl!.isNotEmpty) {
+      return _customBaseUrl!;
     }
-    return 'http://10.0.2.2:8000/api';
+    return 'https://menuku.icaadrm.my.id/api';
   }
 }
 

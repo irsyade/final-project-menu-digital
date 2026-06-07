@@ -1,20 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:lucide_icons/lucide_icons.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:mobile_flutter/constants.dart';
 import 'package:fl_chart/fl_chart.dart';
-import 'dart:math';
 
 import 'package:mobile_flutter/controllers/order_controller.dart';
 import 'package:mobile_flutter/controllers/auth_controller.dart';
+import 'package:mobile_flutter/controllers/report_controller.dart';
 
 class RekapHarianPage extends StatelessWidget {
   RekapHarianPage({super.key});
 
   final OrderController orderController = Get.find<OrderController>();
   final AuthController authController = Get.find<AuthController>();
+  final ReportController reportController = Get.find<ReportController>();
 
   @override
   Widget build(BuildContext context) {
@@ -24,13 +25,13 @@ class RekapHarianPage extends StatelessWidget {
         builder: (context, constraints) {
           final isMobile = constraints.maxWidth < 900;
           return SingleChildScrollView(
-            padding: const EdgeInsets.all(32),
+            padding: EdgeInsets.all(constraints.maxWidth < 600 ? 16 : 32),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 _buildHeader(isMobile),
                 const SizedBox(height: 32),
-                _buildSummaryCards(isMobile),
+                _buildSummaryCards(context, isMobile),
                 const SizedBox(height: 24),
                 _buildChartsRow(isMobile),
                 const SizedBox(height: 24),
@@ -45,6 +46,54 @@ class RekapHarianPage extends StatelessWidget {
 
   Widget _buildHeader(bool isMobile) {
     String today = DateFormat('EEEE, dd MMMM yyyy', 'id_ID').format(DateTime.now());
+
+    if (isMobile) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text("Rekap Harian", style: GoogleFonts.outfit(fontWeight: FontWeight.w900, fontSize: 22, color: AppColors.slate900)),
+          const SizedBox(height: 4),
+          Text(today, style: GoogleFonts.outfit(color: AppColors.slate500, fontSize: 12)),
+          const SizedBox(height: 16),
+          SizedBox(
+            width: double.infinity,
+            child: Obx(() {
+              final isLoading = reportController.isLoading.value;
+              return OutlinedButton.icon(
+                onPressed: isLoading
+                    ? null
+                    : () {
+                        reportController.selectedFilter.value = 'daily';
+                        reportController.downloadReport('PDF');
+                      },
+                icon: isLoading
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor: AlwaysStoppedAnimation<Color>(AppColors.slate500),
+                        ),
+                      )
+                    : const Icon(LucideIcons.download, size: 16),
+                label: Text(
+                  isLoading ? "Mengekspor..." : "Export PDF",
+                  style: GoogleFonts.outfit(fontWeight: FontWeight.bold),
+                ),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: AppColors.slate700,
+                  side: const BorderSide(color: AppColors.slate300),
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  backgroundColor: Colors.white,
+                ),
+              );
+            }),
+          ),
+        ],
+      );
+    }
+
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
@@ -56,32 +105,43 @@ class RekapHarianPage extends StatelessWidget {
             Text(today, style: GoogleFonts.outfit(color: AppColors.slate500, fontSize: 14)),
           ],
         ),
-        OutlinedButton.icon(
-          onPressed: () {
-            Get.snackbar(
-              "Export PDF",
-              "Fitur export PDF sedang dalam pengembangan",
-              backgroundColor: AppColors.slate900,
-              colorText: Colors.white,
-              snackPosition: SnackPosition.BOTTOM,
-              margin: const EdgeInsets.all(24),
-            );
-          },
-          icon: const Icon(LucideIcons.download, size: 16),
-          label: Text("Export PDF", style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
-          style: OutlinedButton.styleFrom(
-            foregroundColor: AppColors.slate700,
-            side: const BorderSide(color: AppColors.slate300),
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            backgroundColor: Colors.white,
-          ),
-        ),
+        Obx(() {
+          final isLoading = reportController.isLoading.value;
+          return OutlinedButton.icon(
+            onPressed: isLoading
+                ? null
+                : () {
+                    reportController.selectedFilter.value = 'daily';
+                    reportController.downloadReport('PDF');
+                  },
+            icon: isLoading
+                ? const SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      valueColor: AlwaysStoppedAnimation<Color>(AppColors.slate500),
+                    ),
+                  )
+                : const Icon(LucideIcons.download, size: 16),
+            label: Text(
+              isLoading ? "Mengekspor..." : "Export PDF",
+              style: GoogleFonts.outfit(fontWeight: FontWeight.bold),
+            ),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: AppColors.slate700,
+              side: const BorderSide(color: AppColors.slate300),
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              backgroundColor: Colors.white,
+            ),
+          );
+        }),
       ],
     );
   }
 
-  Widget _buildSummaryCards(bool isMobile) {
+  Widget _buildSummaryCards(BuildContext context, bool isMobile) {
     return Obx(() {
       final data = orderController.dashboardData;
       final revenue = double.tryParse(data['stats']?['totalIncomeToday']?.toString() ?? "0") ?? 2450000.0;
@@ -99,34 +159,35 @@ class RekapHarianPage extends StatelessWidget {
       if (isMobile) {
         return Column(
           children: [
-            _summaryCard("Total Penjualan", CurrencyFormat.convertToIdr(revenue, 0), "+ 12% vs kemarin", LucideIcons.trendingUp, const Color(0xFFF97316), const Color(0xFFFFF7ED), isPositive: true),
+            _summaryCard(context, "Total Penjualan", CurrencyFormat.convertToIdr(revenue, 0), "+ 12% vs kemarin", LucideIcons.trendingUp, const Color(0xFFF97316), const Color(0xFFFFF7ED), isPositive: true),
             const SizedBox(height: 16),
-            _summaryCard("Jumlah Pesanan", totalOrders.toString(), "hari ini", LucideIcons.shoppingBag, const Color(0xFF3B82F6), const Color(0xFFEFF6FF)),
+            _summaryCard(context, "Jumlah Pesanan", totalOrders.toString(), "hari ini", LucideIcons.shoppingBag, const Color(0xFF3B82F6), const Color(0xFFEFF6FF)),
             const SizedBox(height: 16),
-            _summaryCard("Menu Terlaris", topMenuName, "${topMenuQty}x terjual", LucideIcons.bookmark, const Color(0xFFF59E0B), const Color(0xFFFEF3C7)),
+            _summaryCard(context, "Menu Terlaris", topMenuName, "${topMenuQty}x terjual", LucideIcons.bookmark, const Color(0xFFF59E0B), const Color(0xFFFEF3C7)),
             const SizedBox(height: 16),
-            _summaryCard("Pesanan Pending", pendingOrders.toString(), "perlu diproses", LucideIcons.alertCircle, const Color(0xFFEF4444), const Color(0xFFFEF2F2), isWarning: true),
+            _summaryCard(context, "Pesanan Pending", pendingOrders.toString(), "perlu diproses", LucideIcons.alertCircle, const Color(0xFFEF4444), const Color(0xFFFEF2F2), isWarning: true),
           ],
         );
       }
 
       return Row(
         children: [
-          Expanded(child: _summaryCard("Total Penjualan", CurrencyFormat.convertToIdr(revenue, 0), "+ 12% vs kemarin", LucideIcons.trendingUp, const Color(0xFFF97316), const Color(0xFFFFF7ED), isPositive: true)),
+          Expanded(child: _summaryCard(context, "Total Penjualan", CurrencyFormat.convertToIdr(revenue, 0), "+ 12% vs kemarin", LucideIcons.trendingUp, const Color(0xFFF97316), const Color(0xFFFFF7ED), isPositive: true)),
           const SizedBox(width: 16),
-          Expanded(child: _summaryCard("Jumlah Pesanan", totalOrders.toString(), "hari ini", LucideIcons.shoppingBag, const Color(0xFF3B82F6), const Color(0xFFEFF6FF))),
+          Expanded(child: _summaryCard(context, "Jumlah Pesanan", totalOrders.toString(), "hari ini", LucideIcons.shoppingBag, const Color(0xFF3B82F6), const Color(0xFFEFF6FF))),
           const SizedBox(width: 16),
-          Expanded(child: _summaryCard("Menu Terlaris", topMenuName, "${topMenuQty}x terjual", LucideIcons.bookmark, const Color(0xFFF59E0B), const Color(0xFFFEF3C7))),
+          Expanded(child: _summaryCard(context, "Menu Terlaris", topMenuName, "${topMenuQty}x terjual", LucideIcons.bookmark, const Color(0xFFF59E0B), const Color(0xFFFEF3C7))),
           const SizedBox(width: 16),
-          Expanded(child: _summaryCard("Pesanan Pending", pendingOrders.toString(), "perlu diproses", LucideIcons.alertCircle, const Color(0xFFEF4444), const Color(0xFFFEF2F2), isWarning: true)),
+          Expanded(child: _summaryCard(context, "Pesanan Pending", pendingOrders.toString(), "perlu diproses", LucideIcons.alertCircle, const Color(0xFFEF4444), const Color(0xFFFEF2F2), isWarning: true)),
         ],
       );
     });
   }
 
-  Widget _summaryCard(String title, String value, String subtitle, IconData icon, Color iconColor, Color iconBg, {bool isPositive = false, bool isWarning = false}) {
+  Widget _summaryCard(BuildContext context, String title, String value, String subtitle, IconData icon, Color iconColor, Color iconBg, {bool isPositive = false, bool isWarning = false}) {
+    final isMobile = MediaQuery.of(context).size.width < 600;
     return Container(
-      padding: const EdgeInsets.all(24),
+      padding: EdgeInsets.all(isMobile ? 16 : 24),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
@@ -138,7 +199,7 @@ class RekapHarianPage extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(title, style: GoogleFonts.outfit(color: AppColors.slate500, fontWeight: FontWeight.bold, fontSize: 13)),
+              Text(title, style: GoogleFonts.outfit(color: AppColors.slate500, fontWeight: FontWeight.bold, fontSize: isMobile ? 11 : 13)),
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(color: iconBg, borderRadius: BorderRadius.circular(8)),
@@ -147,7 +208,7 @@ class RekapHarianPage extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 16),
-          Text(value, style: GoogleFonts.outfit(fontWeight: FontWeight.w900, fontSize: 22, color: title == "Total Penjualan" || title == "Pesanan Pending" ? iconColor : AppColors.slate900)),
+          Text(value, style: GoogleFonts.outfit(fontWeight: FontWeight.w900, fontSize: isMobile ? 18 : 22, color: title == "Total Penjualan" || title == "Pesanan Pending" ? iconColor : AppColors.slate900)),
           const SizedBox(height: 8),
           if (isPositive)
             Container(
@@ -156,7 +217,7 @@ class RekapHarianPage extends StatelessWidget {
               child: Text(subtitle, style: GoogleFonts.outfit(color: const Color(0xFF16A34A), fontSize: 11, fontWeight: FontWeight.bold)),
             )
           else
-            Text(subtitle, style: GoogleFonts.outfit(color: isWarning ? const Color(0xFFEF4444) : AppColors.slate400, fontSize: 12, fontWeight: FontWeight.bold)),
+            Text(subtitle, style: GoogleFonts.outfit(color: isWarning ? const Color(0xFFEF4444) : AppColors.slate400, fontSize: isMobile ? 10 : 12, fontWeight: FontWeight.bold)),
         ],
       ),
     );
@@ -198,17 +259,6 @@ class RekapHarianPage extends StatelessWidget {
                   Text("Tren Penjualan", style: GoogleFonts.outfit(fontWeight: FontWeight.w900, fontSize: 18, color: AppColors.slate900)),
                   Text("7 hari terakhir", style: GoogleFonts.outfit(color: AppColors.slate500, fontSize: 12)),
                 ],
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                decoration: BoxDecoration(color: const Color(0xFFFFF7ED), borderRadius: BorderRadius.circular(20)),
-                child: Row(
-                  children: [
-                    Text("Mingguan", style: GoogleFonts.outfit(color: const Color(0xFFEA580C), fontWeight: FontWeight.bold, fontSize: 13)),
-                    const SizedBox(width: 4),
-                    const Icon(LucideIcons.chevronDown, size: 14, color: Color(0xFFEA580C)),
-                  ],
-                ),
               ),
             ],
           ),
@@ -277,7 +327,7 @@ class RekapHarianPage extends StatelessWidget {
                     belowBarData: BarAreaData(
                       show: true,
                       gradient: LinearGradient(
-                        colors: [const Color(0xFFF97316).withOpacity(0.2), const Color(0xFFF97316).withOpacity(0.0)],
+                        colors: [const Color(0xFFF97316).withValues(alpha: 0.2), const Color(0xFFF97316).withValues(alpha: 0.0)],
                         begin: Alignment.topCenter,
                         end: Alignment.bottomCenter,
                       ),

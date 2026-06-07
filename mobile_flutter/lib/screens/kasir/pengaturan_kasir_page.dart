@@ -1,12 +1,11 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:lucide_icons/lucide_icons.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:mobile_flutter/constants.dart';
 import 'package:mobile_flutter/controllers/settings_controller.dart';
 import 'package:mobile_flutter/controllers/auth_controller.dart';
-import 'package:image_picker/image_picker.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class PengaturanKasirPage extends StatefulWidget {
   const PengaturanKasirPage({super.key});
@@ -20,11 +19,66 @@ class _PengaturanKasirPageState extends State<PengaturanKasirPage> {
   final AuthController authController = Get.find<AuthController>();
 
   // Form Profil Akun
-  final _namaAkunController = TextEditingController(text: "Budi Santoso");
-  final _emailController = TextEditingController(text: "budi@restoran.com");
-  final _shiftController = TextEditingController(text: "Pagi (08:00 - 16:00)");
+  late final TextEditingController _namaAkunController;
+  late final TextEditingController _emailController;
+  late final TextEditingController _shiftController;
   final _pinController = TextEditingController(text: "1234");
-  File? _selectedLogo;
+
+  @override
+  void initState() {
+    super.initState();
+    final name = authController.user['name']?.toString() ?? 'Kasir';
+    final email = authController.user['email']?.toString() ?? 'kasir@restoran.com';
+    final role = authController.role.value.isNotEmpty
+        ? authController.role.value[0].toUpperCase() + authController.role.value.substring(1)
+        : 'Kasir';
+
+    _namaAkunController = TextEditingController(text: name);
+    _emailController = TextEditingController(text: email);
+    _shiftController = TextEditingController(text: role);
+    
+    _loadSettings();
+  }
+
+  Future<void> _loadSettings() async {
+    final prefs = await SharedPreferences.getInstance();
+    
+    setState(() {
+      // Printer settings
+      _selectedPrinter = prefs.getString('printer_name') ?? "POS-58 (USB)";
+      _paper80mm = prefs.getBool('printer_paper_80mm') ?? false;
+      _autoPrint = prefs.getBool('printer_auto_print') ?? true;
+      _showLogoOnReceipt = prefs.getBool('printer_show_logo') ?? true;
+      _showCashierName = prefs.getBool('printer_show_cashier') ?? true;
+
+      // Tax settings
+      _pajakActive = prefs.getBool('tax_active') ?? true;
+      _pajakController.text = prefs.getString('tax_rate') ?? "11";
+      _biayaLayananActive = prefs.getBool('service_active') ?? false;
+      _biayaLayananController.text = prefs.getString('service_rate') ?? "5";
+      _bulatkanTotal = prefs.getBool('tax_round_total') ?? true;
+
+      // Security settings
+      _autoLock = prefs.getBool('security_autolock') ?? false;
+      _authVoid = prefs.getBool('security_authvoid') ?? true;
+      _pinLaporan = prefs.getBool('security_pinreport') ?? true;
+      _ringkasanShift = prefs.getBool('security_shiftsummary') ?? true;
+    });
+
+    // Payment settings from server settings
+    if (settingsController.settings.isEmpty) {
+      await settingsController.fetchSettings();
+    }
+    
+    final serverSettings = settingsController.settings;
+    if (serverSettings.isNotEmpty) {
+      setState(() {
+        _payCash = serverSettings['is_cash_active'] == 1 || serverSettings['is_cash_active'] == true || serverSettings['is_cash_active'] == '1';
+        _payQris = serverSettings['is_qris_active'] == 1 || serverSettings['is_qris_active'] == true || serverSettings['is_qris_active'] == '1';
+        _payTransfer = serverSettings['is_transfer_active'] == 1 || serverSettings['is_transfer_active'] == true || serverSettings['is_transfer_active'] == '1';
+      });
+    }
+  }
 
   // Form Pajak & Biaya
   bool _pajakActive = true;
@@ -62,13 +116,6 @@ class _PengaturanKasirPageState extends State<PengaturanKasirPage> {
     super.dispose();
   }
 
-  Future<void> _pickLogo() async {
-    final picker = ImagePicker();
-    final picked = await picker.pickImage(source: ImageSource.gallery);
-    if (picked != null) {
-      setState(() => _selectedLogo = File(picked.path));
-    }
-  }
 
   void _showPreviewStruk() {
     showDialog(
@@ -111,94 +158,102 @@ class _PengaturanKasirPageState extends State<PengaturanKasirPage> {
                       BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 4))
                     ]
                   ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      if (_showLogoOnReceipt) ...[
-                        Container(
-                          width: 40, height: 40,
-                          decoration: const BoxDecoration(color: AppColors.primary, shape: BoxShape.circle),
-                          child: const Icon(LucideIcons.coffee, color: Colors.white, size: 20),
+                  child: Obx(() {
+                    final settingsController = Get.find<SettingsController>();
+                    final restaurantName = settingsController.settings['site_name']?.toString() ?? 'POS Restoran';
+                    final restaurantAddress = settingsController.settings['address']?.toString() ?? 'Jl. Merdeka No. 123, Jakarta';
+                    final restaurantPhone = settingsController.settings['phone']?.toString() ?? '021-1234567';
+                    
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        if (_showLogoOnReceipt) ...[
+                          Container(
+                            width: 40, height: 40,
+                            decoration: BoxDecoration(color: AppColors.primary, shape: BoxShape.circle),
+                            child: const Icon(LucideIcons.coffee, color: Colors.white, size: 20),
+                          ),
+                          const SizedBox(height: 8),
+                        ],
+                        Text(restaurantName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                        Text(restaurantAddress, style: const TextStyle(fontSize: 10)),
+                        if (restaurantPhone.isNotEmpty)
+                          Text("Telp: $restaurantPhone", style: const TextStyle(fontSize: 10)),
+                        const SizedBox(height: 12),
+                        const Text("--------------------------------", style: TextStyle(fontSize: 10)),
+                        const SizedBox(height: 8),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Text("No: INV-001", style: TextStyle(fontSize: 10)),
+                            Text("21/05/2026 13:00", style: const TextStyle(fontSize: 10)),
+                          ],
+                        ),
+                        if (_showCashierName)
+                          Align(
+                            alignment: Alignment.centerLeft, 
+                            child: Text("Kasir: ${_namaAkunController.text}", style: const TextStyle(fontSize: 10))
+                          ),
+                        const SizedBox(height: 8),
+                        const Text("--------------------------------", style: TextStyle(fontSize: 10)),
+                        const SizedBox(height: 8),
+                        
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: const [
+                            Text("2x Nasi Goreng", style: TextStyle(fontSize: 10)),
+                            Text("Rp 50.000", style: TextStyle(fontSize: 10)),
+                          ],
+                        ),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: const [
+                            Text("1x Es Teh Manis", style: TextStyle(fontSize: 10)),
+                            Text("Rp 5.000", style: TextStyle(fontSize: 10)),
+                          ],
                         ),
                         const SizedBox(height: 8),
+                        const Text("--------------------------------", style: TextStyle(fontSize: 10)),
+                        const SizedBox(height: 8),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: const [
+                            Text("Subtotal", style: TextStyle(fontSize: 10)),
+                            Text("Rp 55.000", style: TextStyle(fontSize: 10)),
+                          ],
+                        ),
+                        if (_pajakActive)
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text("PPN (${_pajakController.text}%)", style: const TextStyle(fontSize: 10)),
+                              const Text("Rp 6.050", style: TextStyle(fontSize: 10)),
+                            ],
+                          ),
+                        if (_biayaLayananActive)
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text("Service (${_biayaLayananController.text}%)", style: const TextStyle(fontSize: 10)),
+                              const Text("Rp 2.750", style: TextStyle(fontSize: 10)),
+                            ],
+                          ),
+                        const SizedBox(height: 8),
+                        const Text("--------------------------------", style: TextStyle(fontSize: 10)),
+                        const SizedBox(height: 8),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: const [
+                            Text("TOTAL", style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                            Text("Rp 63.800", style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+                        const Text("Terima Kasih", style: TextStyle(fontSize: 10)),
+                        const Text("Selamat Datang Kembali", style: TextStyle(fontSize: 10)),
                       ],
-                      const Text("POS Restoran", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                      const Text("Jl. Merdeka No. 123, Jakarta", style: TextStyle(fontSize: 10)),
-                      const Text("Telp: 021-1234567", style: TextStyle(fontSize: 10)),
-                      const SizedBox(height: 12),
-                      const Text("--------------------------------", style: TextStyle(fontSize: 10)),
-                      const SizedBox(height: 8),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          const Text("No: INV-001", style: TextStyle(fontSize: 10)),
-                          Text("21/05/2026 13:00", style: const TextStyle(fontSize: 10)),
-                        ],
-                      ),
-                      if (_showCashierName)
-                        Align(
-                          alignment: Alignment.centerLeft, 
-                          child: Text("Kasir: ${_namaAkunController.text}", style: const TextStyle(fontSize: 10))
-                        ),
-                      const SizedBox(height: 8),
-                      const Text("--------------------------------", style: TextStyle(fontSize: 10)),
-                      const SizedBox(height: 8),
-                      
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: const [
-                          Text("2x Nasi Goreng", style: TextStyle(fontSize: 10)),
-                          Text("Rp 50.000", style: TextStyle(fontSize: 10)),
-                        ],
-                      ),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: const [
-                          Text("1x Es Teh Manis", style: TextStyle(fontSize: 10)),
-                          Text("Rp 5.000", style: TextStyle(fontSize: 10)),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-                      const Text("--------------------------------", style: TextStyle(fontSize: 10)),
-                      const SizedBox(height: 8),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: const [
-                          Text("Subtotal", style: TextStyle(fontSize: 10)),
-                          Text("Rp 55.000", style: TextStyle(fontSize: 10)),
-                        ],
-                      ),
-                      if (_pajakActive)
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text("PPN (${_pajakController.text}%)", style: const TextStyle(fontSize: 10)),
-                            const Text("Rp 6.050", style: TextStyle(fontSize: 10)),
-                          ],
-                        ),
-                      if (_biayaLayananActive)
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text("Service (${_biayaLayananController.text}%)", style: const TextStyle(fontSize: 10)),
-                            const Text("Rp 2.750", style: TextStyle(fontSize: 10)),
-                          ],
-                        ),
-                      const SizedBox(height: 8),
-                      const Text("--------------------------------", style: TextStyle(fontSize: 10)),
-                      const SizedBox(height: 8),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: const [
-                          Text("TOTAL", style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
-                          Text("Rp 63.800", style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
-                        ],
-                      ),
-                      const SizedBox(height: 16),
-                      const Text("Terima Kasih", style: TextStyle(fontSize: 10)),
-                      const Text("Selamat Datang Kembali", style: TextStyle(fontSize: 10)),
-                    ],
-                  ),
+                    );
+                  }),
                 ),
                 const SizedBox(height: 24),
                 SizedBox(
@@ -224,7 +279,9 @@ class _PengaturanKasirPageState extends State<PengaturanKasirPage> {
 
   @override
   Widget build(BuildContext context) {
-    bool isWide = MediaQuery.of(context).size.width > 800;
+    final screenWidth = MediaQuery.of(context).size.width;
+    bool isWide = screenWidth > 800;
+    final hPad = screenWidth < 400 ? 16.0 : 20.0;
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
@@ -234,26 +291,26 @@ class _PengaturanKasirPageState extends State<PengaturanKasirPage> {
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text("Pengaturan", style: GoogleFonts.outfit(color: AppColors.slate900, fontWeight: FontWeight.bold, fontSize: 20)),
-            Text("Sesuaikan fitur aplikasi kasir", style: GoogleFonts.outfit(color: AppColors.slate500, fontSize: 12)),
+            Text("Pengaturan", style: GoogleFonts.outfit(color: AppColors.slate900, fontWeight: FontWeight.bold, fontSize: 18)),
+            Text("Sesuaikan fitur aplikasi kasir", style: GoogleFonts.outfit(color: AppColors.slate500, fontSize: 11)),
           ],
         ),
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(24),
+        padding: EdgeInsets.all(hPad),
         child: isWide 
           ? Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Expanded(child: _buildLeftColumn()),
-                const SizedBox(width: 24),
+                const SizedBox(width: 20),
                 Expanded(child: _buildRightColumn()),
               ],
             )
           : Column(
               children: [
                 _buildLeftColumn(),
-                const SizedBox(height: 24),
+                const SizedBox(height: 20),
                 _buildRightColumn(),
               ],
             ),
@@ -265,9 +322,9 @@ class _PengaturanKasirPageState extends State<PengaturanKasirPage> {
     return Column(
       children: [
         _buildProfilAkunCard(),
-        const SizedBox(height: 24),
+        const SizedBox(height: 16),
         _buildPrinterStrukCard(),
-        const SizedBox(height: 24),
+        const SizedBox(height: 16),
         _buildPajakBiayaCard(),
       ],
     );
@@ -277,9 +334,9 @@ class _PengaturanKasirPageState extends State<PengaturanKasirPage> {
     return Column(
       children: [
         _buildShiftJadwalCard(),
-        const SizedBox(height: 24),
+        const SizedBox(height: 16),
         _buildMetodePembayaranCard(),
-        const SizedBox(height: 24),
+        const SizedBox(height: 16),
         _buildKeamananAksesCard(),
       ],
     );
@@ -292,48 +349,23 @@ class _PengaturanKasirPageState extends State<PengaturanKasirPage> {
       title: "Profil Akun",
       child: Column(
         children: [
-          Row(
-            children: [
-              GestureDetector(
-                onTap: _pickLogo,
-                child: Container(
-                  width: 80, height: 80,
-                  decoration: BoxDecoration(
-                    color: AppColors.primary.withOpacity(0.1),
-                    shape: BoxShape.circle,
-                    image: _selectedLogo != null ? DecorationImage(image: FileImage(_selectedLogo!), fit: BoxFit.cover) : null,
-                  ),
-                  child: _selectedLogo == null 
-                    ? const Icon(LucideIcons.user, color: AppColors.primary, size: 32)
-                    : null,
-                ),
+          // Avatar centered on mobile
+          Center(
+            child: Container(
+              width: 72, height: 72,
+              decoration: BoxDecoration(
+                color: AppColors.primary.withOpacity(0.1),
+                shape: BoxShape.circle,
               ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  children: [
-                    _buildCompactTextField("Nama Akun", _namaAkunController),
-                    const SizedBox(height: 12),
-                    _buildCompactTextField("Email", _emailController),
-                  ],
-                ),
-              )
-            ],
+              child: Icon(LucideIcons.user, color: AppColors.primary, size: 28),
+            ),
           ),
           const SizedBox(height: 16),
-          Row(
-            children: [
-              Expanded(child: _buildCompactTextField("Shift", _shiftController)),
-              const SizedBox(width: 16),
-              Expanded(child: _buildCompactTextField("Pin/Password", _pinController, isPassword: true)),
-            ],
-          ),
-          const SizedBox(height: 16),
-          _buildActionText("Ganti Password"),
-          const SizedBox(height: 24),
-          _buildPrimaryButton("Simpan Perubahan", () {
-            Get.snackbar("Tersimpan", "Profil akun berhasil diperbarui.", backgroundColor: AppColors.success, colorText: Colors.white);
-          }),
+          _buildCompactTextField("Nama Akun", _namaAkunController, enabled: false),
+          const SizedBox(height: 12),
+          _buildCompactTextField("Email", _emailController, enabled: false),
+          const SizedBox(height: 12),
+          _buildCompactTextField("Shift", _shiftController, enabled: false),
         ],
       ),
     );
@@ -386,18 +418,43 @@ class _PengaturanKasirPageState extends State<PengaturanKasirPage> {
           _buildToggleRow("Tampilkan logo struk", _showLogoOnReceipt, (val) => setState(() => _showLogoOnReceipt = val)),
           _buildToggleRow("Tampilkan nama kasir", _showCashierName, (val) => setState(() => _showCashierName = val)),
           const SizedBox(height: 24),
-          SizedBox(
-            width: double.infinity,
-            child: OutlinedButton.icon(
-              onPressed: _showPreviewStruk,
-              icon: const Icon(LucideIcons.fileText, size: 16, color: AppColors.primary),
-              label: const Text("Preview Struk", style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold)),
-              style: OutlinedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                side: const BorderSide(color: AppColors.primary),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: _showPreviewStruk,
+                  icon: Icon(LucideIcons.fileText, size: 16, color: AppColors.primary),
+                  label: Text("Preview", style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold, fontSize: 13)),
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    side: BorderSide(color: AppColors.primary),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                ),
               ),
-            ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: ElevatedButton.icon(
+                  onPressed: () async {
+                    final prefs = await SharedPreferences.getInstance();
+                    await prefs.setString('printer_name', _selectedPrinter);
+                    await prefs.setBool('printer_paper_80mm', _paper80mm);
+                    await prefs.setBool('printer_auto_print', _autoPrint);
+                    await prefs.setBool('printer_show_logo', _showLogoOnReceipt);
+                    await prefs.setBool('printer_show_cashier', _showCashierName);
+                    Get.snackbar("Tersimpan", "Pengaturan printer & struk berhasil disimpan.", backgroundColor: AppColors.success, colorText: Colors.white);
+                  },
+                  icon: const Icon(LucideIcons.save, size: 16, color: Colors.white),
+                  label: const Text("Simpan", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    elevation: 0,
+                  ),
+                ),
+              ),
+            ],
           )
         ],
       ),
@@ -409,54 +466,72 @@ class _PengaturanKasirPageState extends State<PengaturanKasirPage> {
       title: "Pajak & Biaya",
       child: Column(
         children: [
-          Row(
+          // PPN Row
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Expanded(
-                child: Text("Pajak PPN (Dalam %)", style: GoogleFonts.outfit(color: AppColors.slate700)),
-              ),
-              SizedBox(
-                width: 60,
-                child: TextField(
-                  controller: _pajakController,
-                  textAlign: TextAlign.center,
-                  decoration: InputDecoration(
-                    isDense: true,
-                    contentPadding: const EdgeInsets.symmetric(vertical: 8),
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+              Row(
+                children: [
+                  Expanded(
+                    child: Text("Pajak PPN (%)", style: GoogleFonts.outfit(color: AppColors.slate700)),
                   ),
-                ),
+                  SizedBox(
+                    width: 56,
+                    child: TextField(
+                      controller: _pajakController,
+                      textAlign: TextAlign.center,
+                      keyboardType: TextInputType.number,
+                      decoration: InputDecoration(
+                        isDense: true,
+                        contentPadding: const EdgeInsets.symmetric(vertical: 8),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                      ),
+                    ),
+                  ),
+                  Switch(value: _pajakActive, onChanged: (val) => setState(() => _pajakActive = val), activeColor: AppColors.primary),
+                ],
               ),
-              const SizedBox(width: 8),
-              Switch(value: _pajakActive, onChanged: (val) => setState(() => _pajakActive = val), activeColor: AppColors.primary),
             ],
           ),
-          const SizedBox(height: 16),
-          Row(
+          const SizedBox(height: 12),
+          // Service Charge Row
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Expanded(
-                child: Text("Biaya Layanan (Service Charge %)", style: GoogleFonts.outfit(color: AppColors.slate700)),
-              ),
-              SizedBox(
-                width: 60,
-                child: TextField(
-                  controller: _biayaLayananController,
-                  textAlign: TextAlign.center,
-                  decoration: InputDecoration(
-                    isDense: true,
-                    contentPadding: const EdgeInsets.symmetric(vertical: 8),
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+              Row(
+                children: [
+                  Expanded(
+                    child: Text("Biaya Layanan (%)", style: GoogleFonts.outfit(color: AppColors.slate700)),
                   ),
-                ),
+                  SizedBox(
+                    width: 56,
+                    child: TextField(
+                      controller: _biayaLayananController,
+                      textAlign: TextAlign.center,
+                      keyboardType: TextInputType.number,
+                      decoration: InputDecoration(
+                        isDense: true,
+                        contentPadding: const EdgeInsets.symmetric(vertical: 8),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                      ),
+                    ),
+                  ),
+                  Switch(value: _biayaLayananActive, onChanged: (val) => setState(() => _biayaLayananActive = val), activeColor: AppColors.primary),
+                ],
               ),
-              const SizedBox(width: 8),
-              Switch(value: _biayaLayananActive, onChanged: (val) => setState(() => _biayaLayananActive = val), activeColor: AppColors.primary),
             ],
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 12),
           _buildToggleRow("Bulatkan total harga", _bulatkanTotal, (val) => setState(() => _bulatkanTotal = val)),
-          const SizedBox(height: 24),
-          _buildPrimaryButton("Simpan Info Pajak", () {
-             Get.snackbar("Tersimpan", "Informasi pajak berhasil diperbarui.", backgroundColor: AppColors.success, colorText: Colors.white);
+          const SizedBox(height: 20),
+          _buildPrimaryButton("Simpan Info Pajak & Biaya", () async {
+             final prefs = await SharedPreferences.getInstance();
+             await prefs.setBool('tax_active', _pajakActive);
+             await prefs.setString('tax_rate', _pajakController.text);
+             await prefs.setBool('service_active', _biayaLayananActive);
+             await prefs.setString('service_rate', _biayaLayananController.text);
+             await prefs.setBool('tax_round_total', _bulatkanTotal);
+             Get.snackbar("Tersimpan", "Informasi pajak & biaya berhasil diperbarui.", backgroundColor: AppColors.success, colorText: Colors.white);
           }),
         ],
       ),
@@ -498,7 +573,7 @@ class _PengaturanKasirPageState extends State<PengaturanKasirPage> {
               Text("Rp 1.450.000", style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: AppColors.primary)),
             ],
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: 20),
           SizedBox(
             width: double.infinity,
             child: ElevatedButton(
@@ -520,7 +595,7 @@ class _PengaturanKasirPageState extends State<PengaturanKasirPage> {
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFFF1F5F9),
                 foregroundColor: AppColors.slate700,
-                padding: const EdgeInsets.symmetric(vertical: 16),
+                padding: const EdgeInsets.symmetric(vertical: 14),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 elevation: 0,
               ),
@@ -540,6 +615,21 @@ class _PengaturanKasirPageState extends State<PengaturanKasirPage> {
           _buildPaymentToggle("Tunai / Cash", LucideIcons.banknote, const Color(0xFF10B981), _payCash, (val) => setState(() => _payCash = val)),
           _buildPaymentToggle("QRIS", LucideIcons.qrCode, const Color(0xFFF97316), _payQris, (val) => setState(() => _payQris = val)),
           _buildPaymentToggle("Transfer Bank", LucideIcons.creditCard, const Color(0xFF3B82F6), _payTransfer, (val) => setState(() => _payTransfer = val)),
+          const SizedBox(height: 16),
+          _buildPrimaryButton("Simpan Metode Pembayaran", () async {
+            bool success = await settingsController.saveSettings({
+              "payment_methods": {
+                "cash": _payCash,
+                "qris": _payQris,
+                "transfer": _payTransfer,
+              }
+            });
+            if (success) {
+              Get.snackbar("Tersimpan", "Metode pembayaran berhasil diperbarui.", backgroundColor: AppColors.success, colorText: Colors.white);
+            } else {
+              Get.snackbar("Gagal", "Gagal menyimpan metode pembayaran ke server.", backgroundColor: Colors.red, colorText: Colors.white);
+            }
+          }),
         ],
       ),
     );
@@ -554,6 +644,15 @@ class _PengaturanKasirPageState extends State<PengaturanKasirPage> {
           _buildToggleRow("Otorisasi void/pembatalan", _authVoid, (val) => setState(() => _authVoid = val)),
           _buildToggleRow("Pin untuk laporan", _pinLaporan, (val) => setState(() => _pinLaporan = val)),
           _buildToggleRow("Tampilkan ringkasan shift", _ringkasanShift, (val) => setState(() => _ringkasanShift = val)),
+          const SizedBox(height: 16),
+          _buildPrimaryButton("Simpan Keamanan & Akses", () async {
+            final prefs = await SharedPreferences.getInstance();
+            await prefs.setBool('security_autolock', _autoLock);
+            await prefs.setBool('security_authvoid', _authVoid);
+            await prefs.setBool('security_pinreport', _pinLaporan);
+            await prefs.setBool('security_shiftsummary', _ringkasanShift);
+            Get.snackbar("Tersimpan", "Pengaturan keamanan & akses berhasil disimpan.", backgroundColor: AppColors.success, colorText: Colors.white);
+          }),
         ],
       ),
     );
@@ -564,7 +663,7 @@ class _PengaturanKasirPageState extends State<PengaturanKasirPage> {
   Widget _buildCard({required String title, required Widget child, IconData? icon}) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
@@ -576,20 +675,20 @@ class _PengaturanKasirPageState extends State<PengaturanKasirPage> {
           Row(
             children: [
               if (icon != null) ...[
-                Icon(icon, color: AppColors.primary, size: 20),
+                Icon(icon, color: AppColors.primary, size: 18),
                 const SizedBox(width: 8),
               ],
-              Text(title, style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.slate900)),
+              Text(title, style: GoogleFonts.outfit(fontSize: 15, fontWeight: FontWeight.bold, color: AppColors.slate900)),
             ],
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: 16),
           child,
         ],
       ),
     );
   }
 
-  Widget _buildCompactTextField(String label, TextEditingController controller, {bool isPassword = false}) {
+  Widget _buildCompactTextField(String label, TextEditingController controller, {bool isPassword = false, bool enabled = true}) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -598,21 +697,22 @@ class _PengaturanKasirPageState extends State<PengaturanKasirPage> {
         TextField(
           controller: controller,
           obscureText: isPassword,
+          enabled: enabled,
           style: GoogleFonts.outfit(fontSize: 14),
           decoration: InputDecoration(
             isDense: true,
             contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            filled: !enabled,
+            fillColor: !enabled ? const Color(0xFFF1F5F9) : Colors.white,
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: AppColors.slate200)),
             enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: AppColors.slate200)),
+            disabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: AppColors.slate200)),
           ),
         ),
       ],
     );
   }
 
-  Widget _buildActionText(String text) {
-    return Text(text, style: GoogleFonts.outfit(color: AppColors.primary, fontWeight: FontWeight.bold, fontSize: 12));
-  }
 
   Widget _buildPrimaryButton(String label, VoidCallback onPressed) {
     return SizedBox(
@@ -621,7 +721,7 @@ class _PengaturanKasirPageState extends State<PengaturanKasirPage> {
         onPressed: onPressed,
         style: ElevatedButton.styleFrom(
           backgroundColor: AppColors.primary,
-          padding: const EdgeInsets.symmetric(vertical: 16),
+          padding: const EdgeInsets.symmetric(vertical: 14),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           elevation: 0,
         ),

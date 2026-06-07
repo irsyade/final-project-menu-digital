@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:lucide_icons/lucide_icons.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:mobile_flutter/constants.dart';
 import 'package:mobile_flutter/controllers/auth_controller.dart';
 import 'package:mobile_flutter/screens/admin/admin_dashboard.dart';
@@ -24,15 +24,25 @@ class _AdminLayoutState extends State<AdminLayout> {
   final SettingsController _settingsController = Get.put(SettingsController());
   int _selectedIndex = 0;
 
-  final List<Widget> _pages = [
-    const AdminDashboard(),
-    AdminOrdersPage(),
-    AdminProductManagementPage(),
-    const AdminPromoPage(),
-    AdminTableManagementPage(),
-    const AdminReportPage(),
-    const AdminSettingsPage(),
-  ];
+  late final List<Widget> _pages;
+
+  @override
+  void initState() {
+    super.initState();
+    _pages = [
+      AdminDashboard(onNavigate: (index) {
+        setState(() {
+          _selectedIndex = index;
+        });
+      }),
+      AdminOrdersPage(),
+      AdminProductManagementPage(),
+      const AdminPromoPage(),
+      AdminTableManagementPage(),
+      const AdminReportPage(),
+      const AdminSettingsPage(),
+    ];
+  }
 
   final List<Map<String, dynamic>> _menuItems = [
     {'icon': LucideIcons.layoutGrid, 'label': 'Dashboard'},
@@ -41,91 +51,96 @@ class _AdminLayoutState extends State<AdminLayout> {
     {'icon': LucideIcons.megaphone, 'label': 'Promo & Jadwal'},
     {'icon': LucideIcons.armchair, 'label': 'Meja & QR Code'},
     {'icon': LucideIcons.barChart3, 'label': 'Laporan Penjualan'},
-    {'icon': LucideIcons.settings, 'label': 'Pengaturan'},
+    {'icon': LucideIcons.settings, 'label': 'Settings'},
   ];
 
   @override
   Widget build(BuildContext context) {
     bool isTablet = MediaQuery.of(context).size.width > 900;
 
-    return Scaffold(
-      backgroundColor: const Color(0xFFF7F6F3),
-      drawer: isTablet ? null : _buildSidebar(),
-      body: Row(
-        children: [
-          if (isTablet) _buildSidebar(),
-          Expanded(
-            child: Column(
-              children: [
-                // Top Header inside content area
-                Container(
-                  color: Colors.white,
-                  padding: const EdgeInsets.fromLTRB(24, 16, 16, 16),
-                  child: Row(
-                    children: [
-                      if (!isTablet)
-                        Builder(
-                          builder: (context) => IconButton(
-                            icon: const Icon(LucideIcons.menu, color: Colors.black),
-                            onPressed: () => Scaffold.of(context).openDrawer(),
+    return Obx(() {
+      // Trigger rebuild on settings color changes
+      final _ = _settingsController.settings.value;
+      
+      return Scaffold(
+        backgroundColor: const Color(0xFFF7F6F3),
+        drawer: isTablet ? null : _buildSidebar(),
+        body: Row(
+          children: [
+            if (isTablet) _buildSidebar(),
+            Expanded(
+              child: Column(
+                children: [
+                  // Top Header inside content area
+                  Container(
+                    color: Colors.white,
+                    padding: const EdgeInsets.fromLTRB(24, 16, 16, 16),
+                    child: Row(
+                      children: [
+                        if (!isTablet)
+                          Builder(
+                            builder: (context) => IconButton(
+                              icon: const Icon(LucideIcons.menu, color: Colors.black),
+                              onPressed: () => Scaffold.of(context).openDrawer(),
+                            ),
+                          ),
+                        Expanded(
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.end,
+                            children: [
+                              Flexible(
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  crossAxisAlignment: CrossAxisAlignment.end,
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Text(
+                                      _settingsController.settings['owner_name'] ?? _settingsController.settings['account_name'] ?? _authController.user['name'] ?? 'Admin',
+                                      style: const TextStyle(
+                                        color: Colors.black,
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 12,
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                    Text(
+                                      'Pemilik Resto',
+                                      style: TextStyle(
+                                        color: AppColors.primary,
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 10,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Container(
+                                width: 35,
+                                height: 35,
+                                decoration: BoxDecoration(
+                                  color: Colors.grey[200],
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: const Icon(LucideIcons.user, color: Colors.grey, size: 20),
+                              ),
+                            ],
                           ),
                         ),
-                      Expanded(
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.end,
-                          children: [
-                            Flexible(
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                crossAxisAlignment: CrossAxisAlignment.end,
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Text(
-                                    _authController.user['name'] ?? 'Admin',
-                                    style: const TextStyle(
-                                      color: Colors.black,
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 12,
-                                    ),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                  const Text(
-                                    'Pemilik Resto',
-                                    style: TextStyle(
-                                      color: AppColors.primary,
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 10,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Container(
-                              width: 35,
-                              height: 35,
-                              decoration: BoxDecoration(
-                                color: Colors.grey[200],
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                              child: const Icon(LucideIcons.user, color: Colors.grey, size: 20),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
-                ),
-                Expanded(
-                  child: _pages[_selectedIndex],
-                ),
-              ],
+                  Expanded(
+                    child: _pages[_selectedIndex],
+                  ),
+                ],
+              ),
             ),
-          ),
-        ],
-      ),
-    );
+          ],
+        ),
+      );
+    });
   }
 
   Widget _buildSidebar() {
@@ -140,15 +155,25 @@ class _AdminLayoutState extends State<AdminLayout> {
             child: Row(
               children: [
                 Container(
-                  padding: const EdgeInsets.all(8),
+                  width: 36,
+                  height: 36,
                   decoration: BoxDecoration(
-                    color: AppColors.primary,
-                    borderRadius: BorderRadius.circular(8),
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(10),
                   ),
-                  child: const Icon(LucideIcons.utensilsCrossed, color: Colors.white, size: 20),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(10),
+                    child: Padding(
+                      padding: const EdgeInsets.all(4.0),
+                      child: Image.asset(
+                        'assets/icon/app_icon.png',
+                        fit: BoxFit.contain,
+                      ),
+                    ),
+                  ),
                 ),
                 const SizedBox(width: 12),
-                const Text.rich(
+                Text.rich(
                   TextSpan(
                     children: [
                       TextSpan(

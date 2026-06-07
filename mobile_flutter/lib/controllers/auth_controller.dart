@@ -5,11 +5,11 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
-import 'package:mobile_flutter/services/api_service.dart';
+import 'package:mobile_flutter/services/auth_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class AuthController extends GetxController {
-  final ApiService _apiService = ApiService();
+  final AuthService _authService = AuthService();
 
   var isLoggedIn = false.obs;
   var isInitialized = false.obs;
@@ -52,36 +52,25 @@ class AuthController extends GetxController {
   // ============================
   Future<bool> login(String email, String password) async {
     try {
-      final response = await _apiService.post('/login', {
-        'email': email,
-        'password': password,
-      });
+      final result = await _authService.login(email, password);
 
-      if (response.body.isEmpty) return false;
-
-      final data = jsonDecode(response.body);
-
-      if (response.statusCode == 200) {
+      if (result['success'] == true) {
         final prefs = await SharedPreferences.getInstance();
 
-        String userRole =
-            (data['user']['role'] ?? 'customer').toString().toLowerCase();
-
-        await prefs.setString('token', data['token']);
-        await prefs.setString('role', userRole);
-        await prefs.setString('user', jsonEncode(data['user']));
+        await prefs.setString('token', result['token']);
+        await prefs.setString('role', result['role']);
+        await prefs.setString('user', jsonEncode(result['user']));
 
         isLoggedIn.value = true;
-        user.value = data['user'];
-        role.value = userRole;
+        user.value = result['user'];
+        role.value = result['role'];
 
-        debugPrint("LOGIN SUCCESS ROLE: $userRole");
-
+        debugPrint("LOGIN SUCCESS ROLE: ${result['role']}");
         return true;
       } else {
         Get.snackbar(
           'Login Gagal',
-          data['message'] ?? 'Email atau password salah',
+          result['message'] ?? 'Email atau password salah',
         );
         return false;
       }
@@ -101,32 +90,20 @@ class AuthController extends GetxController {
     String password,
   ) async {
     try {
-      final response = await _apiService.post('/register', {
-        'name': name,
-        'email': email,
-        'password': password,
-        'password_confirmation': password,
-      });
+      final result = await _authService.register(name, email, password);
 
-      if (response.body.isEmpty) return false;
-
-      final data = jsonDecode(response.body);
-
-      if (response.statusCode == 200 || response.statusCode == 201) {
+      if (result['success'] == true) {
         final prefs = await SharedPreferences.getInstance();
 
-        String userRole =
-            (data['user']['role'] ?? 'customer').toString().toLowerCase();
-
-        await prefs.setString('token', data['token']);
-        await prefs.setString('role', userRole);
-        await prefs.setString('user', jsonEncode(data['user']));
+        await prefs.setString('token', result['token']);
+        await prefs.setString('role', result['role']);
+        await prefs.setString('user', jsonEncode(result['user']));
 
         isLoggedIn.value = true;
-        user.value = data['user'];
-        role.value = userRole;
+        user.value = result['user'];
+        role.value = result['role'];
 
-        debugPrint("REGISTER SUCCESS ROLE: $userRole");
+        debugPrint("REGISTER SUCCESS ROLE: ${result['role']}");
 
         Get.snackbar(
           'Sukses',
@@ -136,7 +113,7 @@ class AuthController extends GetxController {
       } else {
         Get.snackbar(
           'Register Gagal',
-          data['message'] ?? 'Register gagal',
+          result['message'] ?? 'Register gagal',
         );
         return false;
       }
@@ -151,9 +128,7 @@ class AuthController extends GetxController {
   // LOGOUT
   // ============================
   Future<void> logout() async {
-    try {
-      await _apiService.post('/logout', {});
-    } catch (_) {}
+    await _authService.logout();
 
     final prefs = await SharedPreferences.getInstance();
     await prefs.clear();

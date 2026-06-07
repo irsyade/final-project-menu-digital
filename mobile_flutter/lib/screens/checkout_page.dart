@@ -81,7 +81,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
               children: [
                 const Text('Total Payment', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                 Text(CurrencyFormat.convertToIdr(cartController.total, 0), 
-                  style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: AppColors.primary)),
+                  style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: AppColors.primary)),
               ],
             ),
             const SizedBox(height: 24),
@@ -126,7 +126,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
             const SizedBox(width: 16),
             Text(title, style: TextStyle(fontWeight: isSelected ? FontWeight.bold : FontWeight.normal)),
             const Spacer(),
-            if (isSelected) const Icon(Icons.check_circle, color: AppColors.primary),
+            if (isSelected) Icon(Icons.check_circle, color: AppColors.primary),
           ],
         ),
       ),

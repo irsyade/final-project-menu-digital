@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:lucide_icons/lucide_icons.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:mobile_flutter/constants.dart';
 import 'package:intl/intl.dart';
 import 'dart:convert';
@@ -8,7 +8,8 @@ import 'package:mobile_flutter/services/api_service.dart';
 import 'package:fl_chart/fl_chart.dart';
 
 class AdminDashboard extends StatefulWidget {
-  const AdminDashboard({super.key});
+  final Function(int)? onNavigate;
+  const AdminDashboard({super.key, this.onNavigate});
 
   @override
   State<AdminDashboard> createState() => _AdminDashboardState();
@@ -72,19 +73,20 @@ class _AdminDashboardState extends State<AdminDashboard> {
 
   @override
   Widget build(BuildContext context) {
-    if (_isLoading) {
-      return const Center(child: CircularProgressIndicator());
-    }
-
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        bool isTablet = constraints.maxWidth > 900;
-        
-        return SingleChildScrollView(
-          padding: EdgeInsets.all(isTablet ? 32 : 20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
+    return RefreshIndicator(
+      onRefresh: () => _fetchData(),
+      child: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : LayoutBuilder(
+              builder: (context, constraints) {
+                bool isTablet = constraints.maxWidth > 900;
+                
+                return SingleChildScrollView(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  padding: EdgeInsets.all(isTablet ? 32 : 20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
               _buildHeader(),
               const SizedBox(height: 24),
               _buildStatsGrid(constraints.maxWidth),
@@ -109,8 +111,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
           ),
         );
       },
-    );
-  }
+    ),
+  );
+}
 
   Widget _buildHeader() {
     final user = _data['user'] ?? {};
@@ -365,8 +368,8 @@ class _AdminDashboardState extends State<AdminDashboard> {
             children: [
               const Text('5 Pesanan Terbaru', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w900)),
               TextButton(
-                onPressed: () {},
-                child: const Row(
+                onPressed: () => widget.onNavigate?.call(1),
+                child: Row(
                   children: [
                     Text('Lihat Semua', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.primary)),
                     Icon(Icons.chevron_right, size: 16, color: AppColors.primary),
@@ -412,7 +415,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                         const SizedBox(height: 4),
                         Text(
                           _formatCurrency(order['total_price']),
-                          style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 13, color: AppColors.primary),
+                          style: TextStyle(fontWeight: FontWeight.w900, fontSize: 13, color: AppColors.primary),
                         ),
                       ],
                     ),
@@ -483,7 +486,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                     Container(
                       width: 32,
                       height: 32,
-                      decoration: const BoxDecoration(color: AppColors.primary, shape: BoxShape.circle),
+                      decoration: BoxDecoration(color: AppColors.primary, shape: BoxShape.circle),
                       child: Center(
                         child: Text('${index + 1}', style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w900)),
                       ),

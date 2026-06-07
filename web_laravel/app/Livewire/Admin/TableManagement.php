@@ -17,6 +17,11 @@ class TableManagement extends Component
     public string $status = 'available';
     public bool $is_active = true;
 
+    public bool $showQrModal = false;
+    public ?int $qrTableId = null;
+    public string $qrTableNumber = '';
+    public string $qrTableName = '';
+
     protected function rules(): array
     {
         return [
@@ -85,6 +90,15 @@ class TableManagement extends Component
     {
         Table::findOrFail($id)->delete();
         session()->flash('success', 'Meja berhasil dihapus!');
+    }
+
+    public function showQr(int $id): void
+    {
+        $table = Table::findOrFail($id);
+        $this->qrTableId = $table->id;
+        $this->qrTableNumber = $table->number;
+        $this->qrTableName = $table->name ?? '';
+        $this->showQrModal = true;
     }
 
     public function render()

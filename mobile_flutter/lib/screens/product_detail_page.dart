@@ -97,7 +97,7 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                     ),
                     Text('$quantity', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                     IconButton(
-                      icon: const Icon(Icons.add, color: AppColors.primary),
+                      icon: Icon(Icons.add, color: AppColors.primary),
                       onPressed: () {
                         setState(() => quantity++);
                       },

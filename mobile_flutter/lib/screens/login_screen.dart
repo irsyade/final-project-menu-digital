@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:lucide_icons/lucide_icons.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:mobile_flutter/constants.dart';
 import 'package:mobile_flutter/screens/register_screen.dart';
 import 'package:mobile_flutter/screens/kasir/kasir_layout.dart';
 import 'package:mobile_flutter/screens/admin/admin_layout.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:mobile_flutter/blocs/auth/auth_bloc.dart';
@@ -55,6 +56,88 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
+  void _showServerConfigDialog(BuildContext context) async {
+    final prefs = await SharedPreferences.getInstance();
+    final currentUrl = prefs.getString('custom_base_url') ?? 'https://menuku.icaadrm.my.id/api';
+    final urlController = TextEditingController(text: currentUrl);
+
+    Get.dialog(
+      Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        backgroundColor: Colors.white,
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(LucideIcons.server, color: AppColors.primary, size: 24),
+                  const SizedBox(width: 8),
+                  const Text(
+                    'Konfigurasi Server',
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                'Ubah URL server API untuk pengujian lokal (Laragon/localhost).',
+                style: TextStyle(fontSize: 12, color: AppColors.slate500),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: urlController,
+                decoration: InputDecoration(
+                  labelText: 'API Base URL',
+                  hintText: 'https://menuku.icaadrm.my.id/api',
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 24),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  TextButton(
+                    onPressed: () => Get.back(),
+                    child: const Text('Batal', style: TextStyle(color: AppColors.slate500, fontWeight: FontWeight.bold)),
+                  ),
+                  const SizedBox(width: 12),
+                  ElevatedButton(
+                    onPressed: () async {
+                      final newUrl = urlController.text.trim();
+                      if (newUrl.isNotEmpty) {
+                        await prefs.setString('custom_base_url', newUrl);
+                        ApiConstants.setCustomBaseUrl(newUrl);
+                        Get.back();
+                        Get.snackbar(
+                          'Sukses',
+                          'Server API berhasil diubah ke: $newUrl',
+                          backgroundColor: AppColors.success,
+                          colorText: Colors.white,
+                        );
+                      }
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      elevation: 0,
+                    ),
+                    child: const Text('Simpan', style: TextStyle(fontWeight: FontWeight.bold)),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -67,7 +150,7 @@ class _LoginScreenState extends State<LoginScreen> {
             right: -50,
             child: CustomPaint(
               size: const Size(200, 200),
-              painter: CurvePainter(color: AppColors.primary.withOpacity(0.1)),
+              painter: CurvePainter(color: AppColors.primary.withValues(alpha: 0.1)),
             ),
           ),
           // Decorative Lines at Bottom
@@ -78,7 +161,7 @@ class _LoginScreenState extends State<LoginScreen> {
               turns: const AlwaysStoppedAnimation(0.5),
               child: CustomPaint(
                 size: const Size(200, 200),
-                painter: CurvePainter(color: AppColors.primary.withOpacity(0.1)),
+                painter: CurvePainter(color: AppColors.primary.withValues(alpha: 0.1)),
               ),
             ),
           ),
@@ -92,22 +175,28 @@ class _LoginScreenState extends State<LoginScreen> {
                   children: [
                     // Logo
                     Container(
-                      padding: const EdgeInsets.all(16),
+                      width: 90,
+                      height: 90,
                       decoration: BoxDecoration(
-                        color: AppColors.primary,
-                        shape: BoxShape.circle,
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(24),
                         boxShadow: [
                           BoxShadow(
-                            color: AppColors.primary.withOpacity(0.2),
+                            color: Colors.black.withOpacity(0.05),
                             blurRadius: 15,
                             offset: const Offset(0, 8),
                           ),
                         ],
                       ),
-                      child: const Icon(
-                        LucideIcons.utensilsCrossed,
-                        color: Colors.white,
-                        size: 40,
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(24),
+                        child: Padding(
+                          padding: const EdgeInsets.all(8.0),
+                          child: Image.asset(
+                            'assets/icon/app_icon.png',
+                            fit: BoxFit.contain,
+                          ),
+                        ),
                       ),
                     ),
                     const SizedBox(height: 12),

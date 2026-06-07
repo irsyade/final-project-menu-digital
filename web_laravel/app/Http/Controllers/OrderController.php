@@ -38,6 +38,13 @@ class OrderController extends Controller
 
     public function updateStatus(Order $order, Request $request)
     {
+        if ($request->user()->role !== 'kasir') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorized'
+            ], 403);
+        }
+
         $request->validate([
             'status' => 'required|in:pending,processing,completed,cancelled'
         ]);

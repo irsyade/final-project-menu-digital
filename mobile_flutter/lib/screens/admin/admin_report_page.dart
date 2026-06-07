@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:lucide_icons/lucide_icons.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:mobile_flutter/constants.dart';
 import 'package:mobile_flutter/controllers/report_controller.dart';
 import 'package:intl/intl.dart';
@@ -24,30 +24,42 @@ class _AdminReportPageState extends State<AdminReportPage> {
   }
 
   @override
+  void initState() {
+    super.initState();
+    controller.fetchReportData();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFFBFBFA),
-      body: Obx(() {
-        if (controller.isLoading.value && controller.stats.isEmpty) {
-          return const Center(child: CircularProgressIndicator());
-        }
+      body: RefreshIndicator(
+        onRefresh: () async {
+          await controller.fetchReportData();
+        },
+        child: Obx(() {
+          if (controller.isLoading.value && controller.stats.isEmpty) {
+            return const Center(child: CircularProgressIndicator());
+          }
 
-        return SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _buildHeader(),
-              const SizedBox(height: 24),
-              _buildTimeFilter(),
-              _buildStatsGrid(),
-              _buildTrendChart(),
-              _buildTopProducts(),
-              const SizedBox(height: 40),
-            ],
-          ),
-        );
-      }),
+          return SingleChildScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildHeader(),
+                const SizedBox(height: 24),
+                _buildTimeFilter(),
+                _buildStatsGrid(),
+                _buildTrendChart(),
+                _buildTopProducts(),
+                const SizedBox(height: 40),
+              ],
+            ),
+          );
+        }),
+      ),
     );
   }
 
@@ -72,7 +84,7 @@ class _AdminReportPageState extends State<AdminReportPage> {
   }
 
   Widget _buildTimeFilter() {
-    return Container(
+    return Obx(() => Container(
       margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(color: AppColors.slate50, borderRadius: BorderRadius.circular(12)),
       child: Row(
@@ -82,7 +94,7 @@ class _AdminReportPageState extends State<AdminReportPage> {
           _buildFilterItem('Bulanan', 'monthly'),
         ],
       ),
-    );
+    ));
   }
 
   Widget _buildFilterItem(String label, String value) {
@@ -300,7 +312,7 @@ class _AdminReportPageState extends State<AdminReportPage> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(product?['name'] ?? '-', style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 13, color: AppColors.slate900)),
-                    Text(_formatCurrency(revenue), style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 12, color: AppColors.primary)),
+                    Text(_formatCurrency(revenue), style: TextStyle(fontWeight: FontWeight.w900, fontSize: 12, color: AppColors.primary)),
                   ],
                 ),
                 const SizedBox(height: 2),
@@ -330,11 +342,13 @@ class _AdminReportPageState extends State<AdminReportPage> {
   }
 
   void _showExportModal(BuildContext context) {
-    var selectedFormat = 'PDF'.obs;
     Get.bottomSheet(
       Container(
         padding: const EdgeInsets.all(24),
-        decoration: const BoxDecoration(color: Colors.white, borderRadius: BorderRadius.vertical(top: Radius.circular(32))),
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
+        ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -342,59 +356,98 @@ class _AdminReportPageState extends State<AdminReportPage> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text('Export Laporan', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 18)),
-                IconButton(onPressed: () => Get.back(), icon: const Icon(LucideIcons.x, size: 20)),
+                const Text('Export Laporan PDF',
+                    style: TextStyle(fontWeight: FontWeight.w900, fontSize: 18)),
+                IconButton(
+                    onPressed: () => Get.back(),
+                    icon: const Icon(LucideIcons.x, size: 20)),
               ],
             ),
-            const SizedBox(height: 24),
-            const Text('Format', style: TextStyle(fontSize: 12, color: AppColors.slate400, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 12),
-            Obx(() => Row(
-              children: [
-                Expanded(child: _buildFormatButton('CSV', selectedFormat.value == 'CSV', () => selectedFormat.value = 'CSV')),
-                const SizedBox(width: 12),
-                Expanded(child: _buildFormatButton('PDF', selectedFormat.value == 'PDF', () => selectedFormat.value = 'PDF')),
-              ],
-            )),
-            const SizedBox(height: 24),
+            const SizedBox(height: 16),
+
+            // Info box
             Container(
               padding: const EdgeInsets.all(16),
               width: double.infinity,
-              decoration: BoxDecoration(color: AppColors.slate50, borderRadius: BorderRadius.circular(16)),
+              decoration: BoxDecoration(
+                  color: AppColors.slate50,
+                  borderRadius: BorderRadius.circular(16)),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Periode: 1 Apr - 27 Apr 2025', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w900, color: AppColors.slate900)),
+                  Row(
+                    children: [
+                      Icon(LucideIcons.fileText,
+                          size: 14, color: AppColors.primary),
+                      const SizedBox(width: 8),
+                      const Text('Format: PDF',
+                          style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w900,
+                              color: AppColors.slate900)),
+                    ],
+                  ),
                   const SizedBox(height: 4),
-                  Text('Mode: ${controller.selectedFilter.value.capitalizeFirst}', style: const TextStyle(fontSize: 10, color: AppColors.slate400, fontWeight: FontWeight.bold)),
+                  Obx(() => Text(
+                        'Filter: ${controller.selectedFilter.value == "daily" ? "Harian" : controller.selectedFilter.value == "weekly" ? "Mingguan" : "Bulanan"}',
+                        style: const TextStyle(
+                            fontSize: 10,
+                            color: AppColors.slate400,
+                            fontWeight: FontWeight.bold),
+                      )),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Isi: Ringkasan penjualan, top menu terlaris, dan data per periode',
+                    style: const TextStyle(
+                        fontSize: 10,
+                        color: AppColors.slate400,
+                        fontWeight: FontWeight.bold),
+                  ),
                 ],
               ),
             ),
-            const SizedBox(height: 32),
-            ElevatedButton.icon(
-              onPressed: () => Get.back(),
-              style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary, minimumSize: const Size(double.infinity, 56), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)), elevation: 0),
-              icon: const Icon(LucideIcons.download, color: Colors.white, size: 20),
-              label: const Text('Download Laporan', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 16)),
-            ),
+
+            const SizedBox(height: 24),
+
+            // Download button
+            Obx(() => ElevatedButton.icon(
+                  onPressed: controller.isDownloading.value
+                      ? null
+                      : () async {
+                          Get.back();
+                          await controller.downloadReport('PDF');
+                        },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    disabledBackgroundColor:
+                        AppColors.primary.withOpacity(0.6),
+                    minimumSize: const Size(double.infinity, 56),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16)),
+                    elevation: 0,
+                  ),
+                  icon: controller.isDownloading.value
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                              color: Colors.white, strokeWidth: 2))
+                      : const Icon(LucideIcons.download,
+                          color: Colors.white, size: 20),
+                  label: Text(
+                    controller.isDownloading.value
+                        ? 'Membuat PDF...'
+                        : 'Download PDF Laporan',
+                    style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w900,
+                        fontSize: 16),
+                  ),
+                )),
+
             const SizedBox(height: 24),
           ],
         ),
-      ),
-    );
-  }
-
-  Widget _buildFormatButton(String label, bool isActive, VoidCallback onTap) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 16),
-        decoration: BoxDecoration(
-          color: isActive ? Colors.orange.withOpacity(0.05) : Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: isActive ? Colors.orange : AppColors.slate100),
-        ),
-        child: Center(child: Text(label, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w900, color: isActive ? Colors.orange : AppColors.slate400))),
       ),
     );
   }

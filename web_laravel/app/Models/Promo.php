@@ -11,7 +11,7 @@ class Promo extends Model
          'promo_type', 'value', 'min_purchase',
           'quota', 'used', 'start_date', 
           'end_date', 'image', 'is_banner', 
-          'is_active', 'bundling_items', 'free_item_name'
+          'is_active', 'bundling_items'
     ];
 
     protected $casts = [

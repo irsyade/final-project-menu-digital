@@ -1,10 +1,9 @@
 import 'dart:async';
-import 'dart:convert';
 import 'package:get/get.dart';
-import 'package:mobile_flutter/services/api_service.dart';
+import 'package:mobile_flutter/services/order_service.dart';
 
 class OrderController extends GetxController {
-  final ApiService _apiService = ApiService();
+  final OrderService _orderService = OrderService();
   
   var isLoading = false.obs;
   var allOrders = <dynamic>[].obs;
@@ -35,20 +34,17 @@ class OrderController extends GetxController {
   Future<void> fetchAllOrders({bool showLoading = true}) async {
     if (showLoading) isLoading(true);
     try {
-      final response = await _apiService.get('/all-orders');
-      if (response.statusCode == 200) {
-        var data = jsonDecode(response.body);
-        // Only update if data has changed to prevent unnecessary rebuilds
-        if (allOrders.toString() != data.toString()) {
-          allOrders.value = data;
-        }
-      } else if (response.statusCode == 401) {
-        // Silently ignore if unauthenticated
-      } else {
-        print("Error fetching all orders: ${response.statusCode}");
+      final data = await _orderService.getAllOrders();
+      // Only update if data has changed to prevent unnecessary rebuilds
+      if (allOrders.toString() != data.toString()) {
+        allOrders.value = data;
       }
     } catch (e) {
-      print("Error fetching all orders: $e");
+      if (e.toString().contains('Unauthorized')) {
+         // Silently ignore if unauthenticated
+      } else {
+        print("Error fetching all orders: $e");
+      }
     } finally {
       if (showLoading) isLoading(false);
     }
@@ -57,16 +53,14 @@ class OrderController extends GetxController {
   Future<void> fetchDashboardData({bool showLoading = true}) async {
     if (showLoading) isLoading(true);
     try {
-      final response = await _apiService.get('/dashboard');
-      if (response.statusCode == 200) {
-        dashboardData.value = jsonDecode(response.body);
-      } else if (response.statusCode == 401) {
-        // Silently ignore if unauthenticated
-      } else {
-        print("Error fetching dashboard data: ${response.statusCode}");
-      }
+      final data = await _orderService.getDashboardData();
+      dashboardData.value = data;
     } catch (e) {
-      print("Error fetching dashboard data: $e");
+      if (e.toString().contains('Unauthorized')) {
+         // Silently ignore if unauthenticated
+      } else {
+        print("Error fetching dashboard data: $e");
+      }
     } finally {
       if (showLoading) isLoading(false);
     }
@@ -74,10 +68,8 @@ class OrderController extends GetxController {
 
   Future<bool> updateOrderStatus(int orderId, String status) async {
     try {
-      final response = await _apiService.post('/orders/$orderId/status', {
-        'status': status,
-      });
-      if (response.statusCode == 200) {
+      final success = await _orderService.updateOrderStatus(orderId, status);
+      if (success) {
         fetchAllOrders(showLoading: false); // Refresh list immediately
         return true;
       }
@@ -90,10 +82,8 @@ class OrderController extends GetxController {
 
   Future<bool> confirmPayment(int orderId) async {
     try {
-      final response = await _apiService.post('/orders/$orderId/status', {
-        'payment_status': 'paid',
-      });
-      if (response.statusCode == 200) {
+      final success = await _orderService.confirmPayment(orderId);
+      if (success) {
         fetchAllOrders(showLoading: false);
         return true;
       }
@@ -112,20 +102,14 @@ class OrderController extends GetxController {
   }) async {
     isLoading(true);
     try {
-      final response = await _apiService.post('/checkout', {
-        'payment_method': paymentMethod,
-        'name': isTakeAway ? 'Take Away' : (tableName ?? 'Dine In'),
-        'address': isTakeAway ? 'Take Away' : (tableName ?? 'Dine In'),
-        'phone': '-',
-        'email': 'pos@menuku.com',
-        'items': items.map((item) => {
-          'product_id': item.id,
-          'quantity': item.qty.value,
-        }).toList(),
-      });
+      final data = await _orderService.createPosOrder(
+        items: items,
+        paymentMethod: paymentMethod,
+        tableName: tableName,
+        isTakeAway: isTakeAway
+      );
 
-      if (response.statusCode == 200 || response.statusCode == 201) {
-        final data = jsonDecode(response.body);
+      if (data != null) {
         fetchAllOrders(showLoading: false);
         fetchDashboardData(showLoading: false);
         return data;

@@ -27,6 +27,10 @@ class OrderManagement extends Component
 
     public function updateStatus(int $orderId, string $status): void
     {
+        if (auth()->user()->role !== 'kasir') {
+            return;
+        }
+
         $validStatuses = ['pending', 'processing', 'completed', 'cancelled'];
         if (!in_array($status, $validStatuses)) return;
 

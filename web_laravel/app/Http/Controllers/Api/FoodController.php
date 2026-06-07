@@ -33,4 +33,48 @@ class FoodController extends Controller
     {
         return response()->json(Product::where('is_popular', true)->get());
     }
+
+    public function show(Product $product)
+    {
+        return response()->json($product->load('category'));
+    }
+
+    public function storeCategory(Request $request)
+    {
+        $data = $request->validate([
+            'name'  => 'required|string|max:255|unique:categories,name',
+            'image' => 'nullable|image|mimes:jpeg,png,jpg,svg,webp|max:2048',
+        ]);
+
+        if ($request->hasFile('image')) {
+            $data['image'] = $request->file('image')->store('categories', 'public');
+        }
+
+        $category = Category::create($data);
+        return response()->json(['success' => true, 'data' => $category], 201);
+    }
+
+    public function updateCategory(Request $request, $id)
+    {
+        $category = Category::findOrFail($id);
+
+        $data = $request->validate([
+            'name'  => 'required|string|max:255|unique:categories,name,' . $id,
+            'image' => 'nullable|image|mimes:jpeg,png,jpg,svg,webp|max:2048',
+        ]);
+
+        if ($request->hasFile('image')) {
+            $data['image'] = $request->file('image')->store('categories', 'public');
+        }
+
+        $category->update($data);
+        return response()->json(['success' => true, 'data' => $category]);
+    }
+
+    public function destroyCategory($id)
+    {
+        $category = Category::findOrFail($id);
+        $category->delete();
+        return response()->json(['success' => true]);
+    }
 }

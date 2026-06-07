@@ -25,7 +25,6 @@ class PromoManagement extends Component
     public bool $is_active = true;
     public bool $is_banner = false;
     public string $bundling_items = '';
-    public string $free_item_name = '';
     public $photo = null;
     public ?string $existingImage = null;
 
@@ -43,14 +42,13 @@ class PromoManagement extends Component
             'is_active'    => 'boolean',
             'is_banner'    => 'boolean',
             'bundling_items' => 'nullable|string',
-            'free_item_name' => 'nullable|string',
             'photo'        => 'nullable|image|max:2048',
         ];
     }
 
     public function openAdd(): void
     {
-        $this->reset(['editingId','name','description','code','type','promo_type','value','min_purchase','quota','is_active','is_banner','photo','existingImage','bundling_items','free_item_name']);
+        $this->reset(['editingId','name','description','code','type','promo_type','value','min_purchase','quota','is_active','is_banner','photo','existingImage','bundling_items']);
         $this->is_active = true;
         $this->type = 'percentage';
         $this->promo_type = 'diskon';
@@ -74,7 +72,6 @@ class PromoManagement extends Component
         $this->is_banner     = $promo->is_banner;
         $this->existingImage = $promo->image;
         $this->bundling_items = $promo->bundling_items ?? '';
-        $this->free_item_name = $promo->free_item_name ?? '';
         $this->showModal     = true;
     }
 
@@ -100,7 +97,6 @@ class PromoManagement extends Component
             'is_banner'    => $this->is_banner,
             'image'        => $imageUrl,
             'bundling_items' => $this->promo_type === 'bundling' ? $this->bundling_items : null,
-            'free_item_name' => $this->promo_type === 'free_item' ? $this->free_item_name : null,
         ];
 
         if ($this->editingId) {

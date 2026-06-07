@@ -205,11 +205,6 @@
                                     <i data-lucide="package" class="w-6 h-6"></i>
                                     <span class="text-xs">Bundling</span>
                                 </button>
-                                <button type="button" wire:click="$set('promo_type', 'free_item')"
-                                    class="py-4 border-2 rounded-2xl font-bold flex flex-col items-center justify-center gap-2 transition @if($promo_type === 'free_item') border-emerald-500 bg-emerald-50 text-emerald-600 @else border-slate-200 bg-white text-slate-400 hover:border-slate-300 @endif">
-                                    <i data-lucide="gift" class="w-6 h-6"></i>
-                                    <span class="text-xs">Free Item</span>
-                                </button>
                             </div>
                         </div>
 
@@ -269,23 +264,6 @@
                                     @error('value') <p class="text-xs text-red-500 mt-1">{{ $message }}</p> @enderror
                                 </div>
 
-                                @elseif($promo_type === 'free_item')
-                                <div class="col-span-2">
-                                    <label class="block text-sm font-bold text-emerald-600 mb-4">Detail Free Item</label>
-                                    <label class="block text-sm font-bold text-slate-700 mb-2 px-1">Item Gratis *</label>
-                                    <input type="text" wire:model="free_item_name" required placeholder="Contoh: Es Teh Manis"
-                                        class="w-full px-6 py-4 bg-white border border-slate-200 rounded-2xl focus:ring-2 focus:ring-emerald-500 outline-none font-medium text-sm transition">
-                                    @error('free_item_name') <p class="text-xs text-red-500 mt-1">{{ $message }}</p> @enderror
-                                </div>
-                                <div class="col-span-2">
-                                    <label class="block text-sm font-bold text-slate-700 mb-2 px-1">Min. Pembelian *</label>
-                                    <div class="relative">
-                                        <div class="absolute left-4 top-4 text-sm font-black text-slate-400">Rp</div>
-                                        <input type="number" wire:model="min_purchase" required placeholder="0"
-                                            class="w-full pl-10 pr-6 py-4 bg-white border border-slate-200 rounded-2xl focus:ring-2 focus:ring-emerald-500 outline-none font-bold text-sm transition">
-                                    </div>
-                                    @error('min_purchase') <p class="text-xs text-red-500 mt-1">{{ $message }}</p> @enderror
-                                </div>
                                 @endif
                             </div>
                         </div>

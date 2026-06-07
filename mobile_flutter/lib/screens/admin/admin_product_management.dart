@@ -1,6 +1,8 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:lucide_icons/lucide_icons.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:mobile_flutter/constants.dart';
 import 'package:mobile_flutter/controllers/product_controller.dart';
 import 'package:intl/intl.dart';
@@ -32,6 +34,13 @@ class _AdminProductManagementPageState extends State<AdminProductManagementPage>
   }
 
   @override
+  void initState() {
+    super.initState();
+    controller.fetchCategories();
+    controller.fetchProducts();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF1F5F9), // Light grayish background to match mockup
@@ -42,44 +51,58 @@ class _AdminProductManagementPageState extends State<AdminProductManagementPage>
           _buildTopControls(context),
           _buildCategoryFilters(),
           Expanded(
-            child: Obx(() {
-              if (controller.isLoading.value) {
-                return const Center(child: CircularProgressIndicator());
-              }
+            child: RefreshIndicator(
+              onRefresh: () async {
+                await controller.fetchCategories();
+                await controller.fetchProducts();
+              },
+              child: Obx(() {
+                if (controller.isLoading.value) {
+                  return const Center(child: CircularProgressIndicator());
+                }
 
-              List<dynamic> products = controller.products;
-              
-              // Filter by category
-              if (_selectedCategory != 'Semua') {
-                products = products.where((p) => p.categoryName == _selectedCategory).toList();
-              }
+                List<dynamic> products = controller.products;
+                
+                // Filter by category
+                if (_selectedCategory != 'Semua') {
+                  products = products.where((p) => p.categoryName == _selectedCategory).toList();
+                }
 
-              // Filter by search
-              if (_searchController.text.isNotEmpty) {
-                products = products.where((p) => p.name.toLowerCase().contains(_searchController.text.toLowerCase())).toList();
-              }
+                // Filter by search
+                if (_searchController.text.isNotEmpty) {
+                  products = products.where((p) => p.name.toLowerCase().contains(_searchController.text.toLowerCase())).toList();
+                }
 
-              if (products.isEmpty) {
-                return const Center(child: Text('Tidak ada produk.', style: TextStyle(color: AppColors.slate400, fontWeight: FontWeight.bold)));
-              }
-
-              return LayoutBuilder(
-                builder: (context, constraints) {
-                  int crossAxisCount = constraints.maxWidth > 1200 ? 5 : constraints.maxWidth > 900 ? 4 : 2;
-                  return GridView.builder(
-                    padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
-                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: crossAxisCount,
-                      crossAxisSpacing: 16,
-                      mainAxisSpacing: 16,
-                      childAspectRatio: 0.8, // Adjusted for new card layout
+                if (products.isEmpty) {
+                  return SingleChildScrollView(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    child: Container(
+                      height: MediaQuery.of(context).size.height * 0.5,
+                      alignment: Alignment.center,
+                      child: const Text('Tidak ada produk.', style: TextStyle(color: AppColors.slate400, fontWeight: FontWeight.bold)),
                     ),
-                    itemCount: products.length,
-                    itemBuilder: (context, index) => _buildProductCard(context, products[index]),
                   );
-                },
-              );
-            }),
+                }
+
+                return LayoutBuilder(
+                  builder: (context, constraints) {
+                    int crossAxisCount = constraints.maxWidth > 1200 ? 5 : constraints.maxWidth > 900 ? 4 : 2;
+                    return GridView.builder(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
+                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: crossAxisCount,
+                        crossAxisSpacing: 16,
+                        mainAxisSpacing: 16,
+                        childAspectRatio: constraints.maxWidth > 900 ? 0.75 : 0.68,
+                      ),
+                      itemCount: products.length,
+                      itemBuilder: (context, index) => _buildProductCard(context, products[index]),
+                    );
+                  },
+                );
+              }),
+            ),
           ),
         ],
       ),
@@ -222,7 +245,7 @@ class _AdminProductManagementPageState extends State<AdminProductManagementPage>
           Expanded(
             flex: 6,
             child: Padding(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -235,7 +258,7 @@ class _AdminProductManagementPageState extends State<AdminProductManagementPage>
                   const SizedBox(height: 4),
                   Text(
                     _formatCurrency(product.price),
-                    style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 14, color: AppColors.primary),
+                    style: TextStyle(fontWeight: FontWeight.w900, fontSize: 14, color: AppColors.primary),
                   ),
                   const SizedBox(height: 8),
                   Container(
@@ -269,13 +292,21 @@ class _AdminProductManagementPageState extends State<AdminProductManagementPage>
                       Row(
                         children: [
                           GestureDetector(
+                            behavior: HitTestBehavior.opaque,
                             onTap: () => _showProductDialog(context, product: product),
-                            child: const Icon(LucideIcons.edit2, size: 18, color: AppColors.slate400),
+                            child: const Padding(
+                              padding: EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                              child: Icon(LucideIcons.edit2, size: 18, color: AppColors.slate400),
+                            ),
                           ),
-                          const SizedBox(width: 12),
+                          const SizedBox(width: 4),
                           GestureDetector(
+                            behavior: HitTestBehavior.opaque,
                             onTap: () => _confirmDelete(context, product),
-                            child: const Icon(LucideIcons.trash2, size: 18, color: Colors.redAccent),
+                            child: const Padding(
+                              padding: EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                              child: Icon(LucideIcons.trash2, size: 18, color: Colors.redAccent),
+                            ),
                           ),
                         ],
                       ),
@@ -294,17 +325,246 @@ class _AdminProductManagementPageState extends State<AdminProductManagementPage>
     final nameController = TextEditingController(text: product?.name ?? "");
     final priceController = TextEditingController(text: product?.price?.toString() ?? "");
     final descriptionController = TextEditingController(text: product?.description ?? "");
+    final cuisineController = TextEditingController(text: product?.cuisine ?? "");
     final selectedCategoryId = RxInt(product?.categoryId ?? 0);
     final isAvailable = RxBool(product?.isAvailable ?? true);
+
+    final pickedImagePath = RxnString();
+    final selectedTags = <String>[].obs;
+    final selectedPortion = RxString('1 Orang');
+
+    if (product != null) {
+      final List<String> prodTags = product.tags ?? <String>[];
+      final possibleFilters = ['Gurih', 'Pedas', 'Asam Manis', 'Sayuran', 'Vegan', 'Ayam', 'Daging Sapi', 'Seafood', 'Manis'];
+      selectedTags.addAll(prodTags.where((t) => possibleFilters.contains(t)));
+      
+      final portionTag = prodTags.firstWhere(
+        (t) => ['1 Orang', 'Sharing (3-4)', 'Family (5-6)'].contains(t),
+        orElse: () => '1 Orang',
+      );
+      selectedPortion.value = portionTag;
+    }
+
+    final isMobile = MediaQuery.of(context).size.width <= 768;
+
+    Future<void> submitForm() async {
+      if (nameController.text.isEmpty || priceController.text.isEmpty || selectedCategoryId.value == 0) {
+        Get.snackbar("Peringatan", "Nama, Harga, dan Kategori harus diisi", backgroundColor: Colors.orange, colorText: Colors.white);
+        return;
+      }
+
+      final combinedTags = [...selectedTags, selectedPortion.value];
+
+      final data = {
+        "name": nameController.text,
+        "category_id": selectedCategoryId.value,
+        "price": double.tryParse(priceController.text) ?? 0,
+        "description": descriptionController.text.isEmpty ? "-" : descriptionController.text,
+        "cuisine": cuisineController.text,
+        "is_available": isAvailable.value ? 1 : 0,
+        "tags": combinedTags.join(','),
+      };
+      
+      final result = product == null 
+          ? await controller.createProduct(data, imagePath: pickedImagePath.value) 
+          : await controller.updateProduct(product.id, data, imagePath: pickedImagePath.value);
+      
+      if (result['success']) {
+        Get.back();
+        Get.snackbar("Sukses", "Menu berhasil disimpan", backgroundColor: Colors.green, colorText: Colors.white);
+      } else {
+        Get.snackbar("Gagal", result['message'], backgroundColor: Colors.red, colorText: Colors.white);
+      }
+    }
+
+    Widget buildLeftColumn() {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildLabel('Foto Produk'),
+          GestureDetector(
+            onTap: () async {
+              final ImagePicker picker = ImagePicker();
+              final XFile? image = await picker.pickImage(source: ImageSource.gallery);
+              if (image != null) {
+                pickedImagePath.value = image.path;
+                pickedImagePath.refresh();
+              }
+            },
+            child: Obx(() {
+              final path = pickedImagePath.value;
+              final hasExistingImage = product != null && product.image != null;
+
+              if (path != null) {
+                return ClipRRect(
+                  borderRadius: BorderRadius.circular(16),
+                  child: Image.file(
+                    File(path),
+                    height: isMobile ? 160 : 220,
+                    width: double.infinity,
+                    fit: BoxFit.cover,
+                  ),
+                );
+              } else if (hasExistingImage) {
+                return ClipRRect(
+                  borderRadius: BorderRadius.circular(16),
+                  child: Image.network(
+                    product.image!,
+                    height: isMobile ? 160 : 220,
+                    width: double.infinity,
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) => const Icon(LucideIcons.image, size: 32, color: AppColors.slate300),
+                  ),
+                );
+              }
+
+              return Container(
+                height: isMobile ? 160 : 220,
+                width: double.infinity,
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withOpacity(0.05),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: AppColors.primary.withOpacity(0.3), width: 2, style: BorderStyle.solid), // Fallback for dashed
+                ),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: AppColors.primary.withOpacity(0.1),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(LucideIcons.uploadCloud, color: AppColors.primary, size: isMobile ? 24 : 28),
+                    ),
+                    SizedBox(height: isMobile ? 8 : 16),
+                    const Text('Upload foto produk', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                    const SizedBox(height: 4),
+                    const Text('JPG, PNG Max ukuran 10MB', style: TextStyle(color: AppColors.slate400, fontSize: 12)),
+                  ],
+                ),
+              );
+            }),
+          ),
+        ],
+      );
+    }
+
+    Widget buildRightColumn() {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildLabel('Nama Produk *'),
+          _buildTextField(nameController, 'Mis. Ayam Bakar Spesial'),
+          const SizedBox(height: 16),
+          _buildLabel('Deskripsi Produk'),
+          _buildTextField(descriptionController, 'Deskripsi singkat menu...', maxLines: 3),
+          const SizedBox(height: 16),
+          if (isMobile) ...[
+            _buildLabel('Harga Asal (Opsional)'),
+            _buildTextField(TextEditingController(), '38000', isNumber: true),
+            const SizedBox(height: 16),
+            _buildLabel('Harga Jual *'),
+            _buildTextField(priceController, '35000', isNumber: true),
+          ] else
+            Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _buildLabel('Harga Asal (Opsional)'),
+                      _buildTextField(TextEditingController(), '38000', isNumber: true),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _buildLabel('Harga Jual *'),
+                      _buildTextField(priceController, '35000', isNumber: true),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          const SizedBox(height: 16),
+          if (isMobile) ...[
+            _buildLabel('Cabang/Outlet'),
+            _buildTextField(cuisineController, 'Pilih cabang'),
+            const SizedBox(height: 16),
+            _buildLabel('Kategori *'),
+            Obx(() => Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              decoration: BoxDecoration(
+                color: AppColors.slate50,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: AppColors.slate200),
+              ),
+              child: DropdownButtonHideUnderline(
+                child: DropdownButton<int>(
+                  isExpanded: true,
+                  value: selectedCategoryId.value == 0 ? null : selectedCategoryId.value,
+                  hint: const Text('Pilih', style: TextStyle(color: AppColors.slate400, fontSize: 14)),
+                  items: controller.categories.map((c) => DropdownMenuItem(value: c.id, child: Text(c.name))).toList(),
+                  onChanged: (val) => selectedCategoryId.value = val ?? 0,
+                ),
+              ),
+            )),
+          ] else
+            Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _buildLabel('Cabang/Outlet'),
+                      _buildTextField(cuisineController, 'Pilih cabang'),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _buildLabel('Kategori *'),
+                      Obx(() => Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        decoration: BoxDecoration(
+                          color: AppColors.slate50,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: AppColors.slate200),
+                        ),
+                        child: DropdownButtonHideUnderline(
+                          child: DropdownButton<int>(
+                            isExpanded: true,
+                            value: selectedCategoryId.value == 0 ? null : selectedCategoryId.value,
+                            hint: const Text('Pilih', style: TextStyle(color: AppColors.slate400, fontSize: 14)),
+                            items: controller.categories.map((c) => DropdownMenuItem(value: c.id, child: Text(c.name))).toList(),
+                            onChanged: (val) => selectedCategoryId.value = val ?? 0,
+                          ),
+                        ),
+                      )),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+        ],
+      );
+    }
 
     Get.dialog(
       Dialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         backgroundColor: Colors.white,
         child: Container(
-          width: MediaQuery.of(context).size.width * 0.7,
+          width: isMobile ? MediaQuery.of(context).size.width * 0.92 : MediaQuery.of(context).size.width * 0.7,
           constraints: const BoxConstraints(maxWidth: 800),
-          padding: const EdgeInsets.all(32),
+          padding: EdgeInsets.all(isMobile ? 18 : 32),
           child: SingleChildScrollView(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -324,229 +584,183 @@ class _AdminProductManagementPageState extends State<AdminProductManagementPage>
                   ],
                 ),
                 const SizedBox(height: 24),
-                // 2-Column Layout
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Left Column (Photo)
-                    Expanded(
-                      flex: 1,
-                      child: Column(
+                // Layout
+                isMobile
+                    ? Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          buildLeftColumn(),
+                          const SizedBox(height: 24),
+                          buildRightColumn(),
+                        ],
+                      )
+                    : Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          _buildLabel('Foto Produk'),
-                          Container(
-                            height: 220,
-                            width: double.infinity,
-                            decoration: BoxDecoration(
-                              color: AppColors.primary.withOpacity(0.05),
-                              borderRadius: BorderRadius.circular(16),
-                              border: Border.all(color: AppColors.primary.withOpacity(0.3), width: 2, style: BorderStyle.solid), // Fallback for dashed
-                            ),
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Container(
-                                  padding: const EdgeInsets.all(12),
-                                  decoration: BoxDecoration(
-                                    color: AppColors.primary.withOpacity(0.1),
-                                    shape: BoxShape.circle,
-                                  ),
-                                  child: const Icon(LucideIcons.uploadCloud, color: AppColors.primary, size: 28),
-                                ),
-                                const SizedBox(height: 16),
-                                const Text('Upload foto produk', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                                const SizedBox(height: 4),
-                                const Text('JPG, PNG Max ukuran 10MB', style: TextStyle(color: AppColors.slate400, fontSize: 12)),
-                              ],
-                            ),
+                          Expanded(
+                            flex: 1,
+                            child: buildLeftColumn(),
+                          ),
+                          const SizedBox(width: 32),
+                          Expanded(
+                            flex: 2,
+                            child: buildRightColumn(),
                           ),
                         ],
                       ),
-                    ),
-                    const SizedBox(width: 32),
-                    // Right Column (Fields)
-                    Expanded(
-                      flex: 2,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          _buildLabel('Nama Produk *'),
-                          _buildTextField(nameController, 'Mis. Ayam Bakar Spesial'),
-                          const SizedBox(height: 16),
-                          _buildLabel('Deskripsi Produk'),
-                          _buildTextField(descriptionController, 'Deskripsi singkat menu...', maxLines: 3),
-                          const SizedBox(height: 16),
-                          Row(
-                            children: [
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    _buildLabel('Harga Asal (Opsional)'),
-                                    _buildTextField(TextEditingController(), '38000', isNumber: true),
-                                  ],
-                                ),
-                              ),
-                              const SizedBox(width: 16),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    _buildLabel('Harga Jual *'),
-                                    _buildTextField(priceController, '35000', isNumber: true),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 16),
-                          Row(
-                            children: [
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    _buildLabel('Cabang/Outlet'),
-                                    _buildTextField(TextEditingController(), 'Pilih cabang'),
-                                  ],
-                                ),
-                              ),
-                              const SizedBox(width: 16),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    _buildLabel('Kategori *'),
-                                    Obx(() => Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                                      decoration: BoxDecoration(
-                                        color: AppColors.slate50,
-                                        borderRadius: BorderRadius.circular(12),
-                                        border: Border.all(color: AppColors.slate200),
-                                      ),
-                                      child: DropdownButtonHideUnderline(
-                                        child: DropdownButton<int>(
-                                          isExpanded: true,
-                                          value: selectedCategoryId.value == 0 ? null : selectedCategoryId.value,
-                                          hint: const Text('Pilih', style: TextStyle(color: AppColors.slate400, fontSize: 14)),
-                                          items: controller.categories.map((c) => DropdownMenuItem(value: c.id, child: Text(c.name))).toList(),
-                                          onChanged: (val) => selectedCategoryId.value = val ?? 0,
-                                        ),
-                                      ),
-                                    )),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
                 const SizedBox(height: 24),
                 // Tags
                 _buildLabel('Tag Filter'),
-                Wrap(
+                Obx(() => Wrap(
                   spacing: 8,
-                  children: ['Gurih', 'Pedas', 'Asam Manis', 'Sayuran', 'Vegan', 'Ayam', 'Daging Sapi', 'Seafood', 'Manis'].map((tag) => Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: AppColors.slate200),
-                    ),
-                    child: Text(tag, style: const TextStyle(fontSize: 12, color: AppColors.slate500, fontWeight: FontWeight.w600)),
-                  )).toList(),
-                ),
+                  runSpacing: 8,
+                  children: ['Gurih', 'Pedas', 'Asam Manis', 'Sayuran', 'Vegan', 'Ayam', 'Daging Sapi', 'Seafood', 'Manis'].map((tag) {
+                    final isSelected = selectedTags.contains(tag);
+                    return GestureDetector(
+                      onTap: () {
+                        if (isSelected) {
+                          selectedTags.remove(tag);
+                        } else {
+                          selectedTags.add(tag);
+                        }
+                        selectedTags.refresh();
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: isSelected ? AppColors.primary.withOpacity(0.1) : Colors.white,
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(color: isSelected ? AppColors.primary : AppColors.slate200),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            if (isSelected) Icon(LucideIcons.check, size: 14, color: AppColors.primary),
+                            if (isSelected) const SizedBox(width: 4),
+                            Text(tag, style: TextStyle(fontSize: 12, color: isSelected ? AppColors.primary : AppColors.slate500, fontWeight: FontWeight.w600)),
+                          ],
+                        ),
+                      ),
+                    );
+                  }).toList(),
+                )),
                 const SizedBox(height: 16),
                 // Ukuran Porsi
                 _buildLabel('Ukuran Porsi'),
-                Wrap(
+                Obx(() => Wrap(
                   spacing: 8,
-                  children: ['1 Orang', 'Sharing (3-4)', 'Family (5-6)'].map((size) => Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: size == '1 Orang' ? AppColors.primary.withOpacity(0.1) : Colors.white,
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: size == '1 Orang' ? AppColors.primary : AppColors.slate200),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        if (size == '1 Orang') const Icon(LucideIcons.check, size: 14, color: AppColors.primary),
-                        if (size == '1 Orang') const SizedBox(width: 4),
-                        Text(size, style: TextStyle(fontSize: 12, color: size == '1 Orang' ? AppColors.primary : AppColors.slate500, fontWeight: FontWeight.w600)),
-                      ],
-                    ),
-                  )).toList(),
-                ),
+                  runSpacing: 8,
+                  children: ['1 Orang', 'Sharing (3-4)', 'Family (5-6)'].map((size) {
+                    final isSelected = selectedPortion.value == size;
+                    return GestureDetector(
+                      onTap: () {
+                        selectedPortion.value = size;
+                        selectedPortion.refresh();
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: isSelected ? AppColors.primary.withOpacity(0.1) : Colors.white,
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(color: isSelected ? AppColors.primary : AppColors.slate200),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            if (isSelected) Icon(LucideIcons.check, size: 14, color: AppColors.primary),
+                            if (isSelected) const SizedBox(width: 4),
+                            Text(size, style: TextStyle(fontSize: 12, color: isSelected ? AppColors.primary : AppColors.slate500, fontWeight: FontWeight.w600)),
+                          ],
+                        ),
+                      ),
+                    );
+                  }).toList(),
+                )),
                 const SizedBox(height: 24),
                 // Bottom Bar
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Row(
-                      children: [
-                        Obx(() => Switch(
-                          value: isAvailable.value,
-                          onChanged: (val) => isAvailable.value = val,
-                          activeColor: Colors.green,
-                        )),
-                        const SizedBox(width: 8),
-                        Text('Status Stok: ', style: TextStyle(color: AppColors.slate500, fontWeight: FontWeight.bold, fontSize: 14)),
-                        Obx(() => Text(
-                          isAvailable.value ? 'Tersedia' : 'Habis', 
-                          style: TextStyle(color: isAvailable.value ? Colors.green : Colors.red, fontWeight: FontWeight.bold, fontSize: 14)
-                        )),
-                      ],
-                    ),
-                    Row(
-                      children: [
-                        TextButton(
-                          onPressed: () => Get.back(),
-                          child: const Text('Batal', style: TextStyle(color: AppColors.slate500, fontWeight: FontWeight.bold)),
-                        ),
-                        const SizedBox(width: 16),
-                        ElevatedButton(
-                          onPressed: () async {
-                            if (nameController.text.isEmpty || priceController.text.isEmpty || selectedCategoryId.value == 0) {
-                              Get.snackbar("Peringatan", "Nama, Harga, dan Kategori harus diisi", backgroundColor: Colors.orange, colorText: Colors.white);
-                              return;
-                            }
-
-                            final data = {
-                              "name": nameController.text,
-                              "category_id": selectedCategoryId.value,
-                              "price": double.tryParse(priceController.text) ?? 0,
-                              "description": descriptionController.text.isEmpty ? "-" : descriptionController.text,
-                              "is_available": isAvailable.value,
-                              if (product != null && product.image != null) "image": product.image,
-                            };
-                            
-                            final result = product == null ? await controller.createProduct(data) : await controller.updateProduct(product.id, data);
-                            
-                            if (result['success']) {
-                              Get.back();
-                              Get.snackbar("Sukses", "Menu berhasil disimpan", backgroundColor: Colors.green, colorText: Colors.white);
-                            } else {
-                              Get.snackbar("Gagal", result['message'], backgroundColor: Colors.red, colorText: Colors.white);
-                            }
-                          },
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppColors.primary,
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                            elevation: 0,
+                isMobile
+                    ? Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Row(
+                            children: [
+                              Obx(() => Switch(
+                                value: isAvailable.value,
+                                onChanged: (val) => isAvailable.value = val,
+                                activeColor: Colors.green,
+                              )),
+                              const SizedBox(width: 8),
+                              const Text('Status: ', style: TextStyle(color: AppColors.slate500, fontWeight: FontWeight.bold, fontSize: 14)),
+                              Obx(() => Text(
+                                isAvailable.value ? 'Tersedia' : 'Habis', 
+                                style: TextStyle(color: isAvailable.value ? Colors.green : Colors.red, fontWeight: FontWeight.bold, fontSize: 14)
+                              )),
+                            ],
                           ),
-                          child: const Text('Simpan Produk', style: TextStyle(fontWeight: FontWeight.w900)),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
+                          const SizedBox(height: 16),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.end,
+                            children: [
+                              TextButton(
+                                onPressed: () => Get.back(),
+                                child: const Text('Batal', style: TextStyle(color: AppColors.slate500, fontWeight: FontWeight.bold)),
+                              ),
+                              const SizedBox(width: 16),
+                              ElevatedButton(
+                                onPressed: submitForm,
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: AppColors.primary,
+                                  foregroundColor: Colors.white,
+                                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                  elevation: 0,
+                                ),
+                                child: const Text('Simpan Produk', style: TextStyle(fontWeight: FontWeight.w900)),
+                              ),
+                            ],
+                          ),
+                        ],
+                      )
+                    : Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Row(
+                            children: [
+                              Obx(() => Switch(
+                                value: isAvailable.value,
+                                onChanged: (val) => isAvailable.value = val,
+                                activeColor: Colors.green,
+                              )),
+                              const SizedBox(width: 8),
+                              const Text('Status Stok: ', style: TextStyle(color: AppColors.slate500, fontWeight: FontWeight.bold, fontSize: 14)),
+                              Obx(() => Text(
+                                isAvailable.value ? 'Tersedia' : 'Habis', 
+                                style: TextStyle(color: isAvailable.value ? Colors.green : Colors.red, fontWeight: FontWeight.bold, fontSize: 14)
+                              )),
+                            ],
+                          ),
+                          Row(
+                            children: [
+                              TextButton(
+                                onPressed: () => Get.back(),
+                                child: const Text('Batal', style: TextStyle(color: AppColors.slate500, fontWeight: FontWeight.bold)),
+                              ),
+                              const SizedBox(width: 16),
+                              ElevatedButton(
+                                onPressed: submitForm,
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: AppColors.primary,
+                                  foregroundColor: Colors.white,
+                                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                  elevation: 0,
+                                ),
+                                child: const Text('Simpan Produk', style: TextStyle(fontWeight: FontWeight.w900)),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
               ],
             ),
           ),
@@ -575,7 +789,7 @@ class _AdminProductManagementPageState extends State<AdminProductManagementPage>
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: AppColors.slate200)),
         enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: AppColors.slate200)),
-        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.primary)),
+        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: AppColors.primary)),
       ),
     );
   }
@@ -608,7 +822,7 @@ class _AdminProductManagementPageState extends State<AdminProductManagementPage>
                   children: [
                     const TextSpan(text: 'Menu '),
                     TextSpan(text: '"${product.name}"', style: const TextStyle(fontWeight: FontWeight.w900, color: AppColors.slate900)),
-                    const TextSpan(text: ' akan dihapus permanen. QR code yang sudah dicetak tidak bisa digunakan kembali.'),
+                    const TextSpan(text: ' akan dihapus permanen.'),
                   ],
                 ),
               ),
@@ -630,10 +844,12 @@ class _AdminProductManagementPageState extends State<AdminProductManagementPage>
                   Expanded(
                     child: ElevatedButton(
                       onPressed: () async {
-                        bool success = await controller.deleteProduct(product.id);
-                        if (success) {
+                        final result = await controller.deleteProduct(product.id);
+                        if (result['success'] == true) {
                           Get.back();
-                          Get.snackbar("Sukses", "Menu berhasil dihapus", backgroundColor: AppColors.primary, colorText: Colors.white);
+                          Get.snackbar("Sukses", "Menu berhasil dihapus", backgroundColor: AppColors.success, colorText: Colors.white);
+                        } else {
+                          Get.snackbar("Gagal", result['message'] ?? "Gagal menghapus menu", backgroundColor: Colors.red, colorText: Colors.white);
                         }
                       },
                       style: ElevatedButton.styleFrom(

@@ -19,23 +19,29 @@ class ProductController extends Controller
     public function store(Request $request)
     {
         $data = $request->validate([
-            'category_id' => 'required|exists:categories,id',
-            'cuisine' => 'nullable|string|max:100',
-            'name' => 'required|string|max:255',
-            'description' => 'required|string',
-            'price' => 'required|numeric|min:0',
-            'discount_percentage' => 'nullable|integer|min:0|max:100',
-            'image' => 'nullable|image|mimes:jpeg,png,jpg,svg,webp|max:2048',
-            'image_url' => 'nullable|url',
-            'tags' => 'nullable|string',
-            'is_popular' => 'boolean',
-            'is_available' => 'boolean',
+            'category_id'          => 'required|exists:categories,id',
+            'cuisine'              => 'nullable|string|max:100',
+            'name'                 => 'required|string|max:255',
+            'description'          => 'nullable|string',
+            'price'                => 'required|numeric|min:0',
+            'discount_percentage'  => 'nullable|integer|min:0|max:100',
+            'image'                => 'nullable|image|mimes:jpeg,png,jpg,svg,webp|max:2048',
+            'image_url'            => 'nullable|url',
+            'tags'                 => 'nullable',
+            'is_popular'           => 'nullable',
+            'is_available'         => 'nullable',
         ]);
 
-        $data['is_popular'] = $request->has('is_popular');
-        $data['is_available'] = $request->has('is_available') || !$request->has('from_form'); 
-        if ($request->filled('tags')) {
-            $data['tags'] = array_map('trim', explode(',', $request->tags));
+        // Accept bool, int(1/0), string("1"/"true") from both JSON and form data
+        $data['is_popular']  = $this->parseBool($request->input('is_popular'), false);
+        $data['is_available'] = $this->parseBool($request->input('is_available'), true);
+
+        // Convert tags string "Gurih,Pedas" → array ["Gurih","Pedas"]
+        $tags = $request->input('tags');
+        if (is_array($tags)) {
+            $data['tags'] = $tags;
+        } elseif (is_string($tags) && trim($tags) !== '') {
+            $data['tags'] = array_map('trim', explode(',', $tags));
         } else {
             $data['tags'] = [];
         }
@@ -47,44 +53,68 @@ class ProductController extends Controller
         }
         unset($data['image_url']);
 
-        Product::create($data);
+        $product = Product::create($data);
+
+        if ($request->expectsJson() || $request->is('api/*')) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Product created successfully!',
+                'product' => $product->load('category'),
+            ]);
+        }
+
         return back()->with('success', 'Product created successfully!');
     }
 
     public function update(Request $request, Product $product)
     {
         $data = $request->validate([
-            'category_id' => 'required|exists:categories,id',
-            'cuisine' => 'nullable|string|max:100',
-            'name' => 'required|string|max:255',
-            'description' => 'required|string',
-            'price' => 'required|numeric|min:0',
+            'category_id'         => 'required|exists:categories,id',
+            'cuisine'             => 'nullable|string|max:100',
+            'name'                => 'required|string|max:255',
+            'description'         => 'nullable|string',
+            'price'               => 'required|numeric|min:0',
             'discount_percentage' => 'nullable|integer|min:0|max:100',
-            'image' => 'nullable|image|mimes:jpeg,png,jpg,svg,webp|max:2048',
-            'image_url' => 'nullable|url',
-            'tags' => 'nullable|string',
-            'is_popular' => 'boolean',
-            'is_available' => 'boolean'
+            'image'               => 'nullable|image|mimes:jpeg,png,jpg,svg,webp|max:2048',
+            'image_url'           => 'nullable|url',
+            'tags'                => 'nullable',
+            'is_popular'          => 'nullable',
+            'is_available'        => 'nullable',
         ]);
 
-        $data['is_popular'] = $request->has('is_popular');
-        $data['is_available'] = $request->has('is_available');
+        $data['is_popular']  = $this->parseBool($request->input('is_popular'), $product->is_popular);
+        $data['is_available'] = $this->parseBool($request->input('is_available'), $product->is_available);
 
-        // Process tags: "Pedas, Manis" -> ["Pedas", "Manis"]
-        if ($request->has('tags')) {
-            $data['tags'] = $request->tags ? array_map('trim', explode(',', $request->tags)) : [];
+        $tags = $request->input('tags');
+        if (is_array($tags)) {
+            $data['tags'] = $tags;
+        } elseif (is_string($tags) && trim($tags) !== '') {
+            $data['tags'] = array_map('trim', explode(',', $tags));
         }
 
         if ($request->hasFile('image')) {
-            if ($product->image && !str_starts_with($product->image, 'http')) Storage::disk('public')->delete($product->image);
+            if ($product->image && !str_starts_with($product->image, 'http')) {
+                Storage::disk('public')->delete($product->image);
+            }
             $data['image'] = $request->file('image')->store('products', 'public');
         } elseif ($request->filled('image_url')) {
-            if ($product->image && !str_starts_with($product->image, 'http')) Storage::disk('public')->delete($product->image);
+            if ($product->image && !str_starts_with($product->image, 'http')) {
+                Storage::disk('public')->delete($product->image);
+            }
             $data['image'] = $request->input('image_url');
         }
         unset($data['image_url']);
 
         $product->update($data);
+
+        if ($request->expectsJson() || $request->is('api/*')) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Product updated successfully!',
+                'product' => $product->fresh()->load('category'),
+            ]);
+        }
+
         return back()->with('success', 'Product updated successfully!');
     }
 
@@ -109,5 +139,18 @@ class ProductController extends Controller
             return response()->json(['success' => true]);
         }
         return back()->with('success', 'Product deleted successfully!');
+    }
+
+    // ─── Helper ───────────────────────────────────────────────────────────────
+
+    private function parseBool(mixed $value, bool $default = false): bool
+    {
+        if ($value === null)  return $default;
+        if (is_bool($value))  return $value;
+        if (is_int($value))   return $value !== 0;
+        if (is_string($value)) {
+            return in_array(strtolower($value), ['1', 'true', 'yes'], true);
+        }
+        return $default;
     }
 }

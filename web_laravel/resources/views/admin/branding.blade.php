@@ -1,6 +1,6 @@
 @extends('layouts.admin')
 
-@section('title', 'Pengaturan')
+@section('title', '')
 
 @section('content')
     <livewire:admin.settings-management />

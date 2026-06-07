@@ -43,10 +43,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
     if (success) {
       Get.offAll(() => const KasirLayout());
-    } else {
-      Get.snackbar('Error', 'Registration failed. Please try again.',
-          backgroundColor: Colors.red, colorText: Colors.white);
     }
+    // Error snackbar sudah ditampilkan oleh AuthController, tidak perlu duplikat
   }
 
   @override
@@ -66,7 +64,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
+              Text(
                 'Create Account',
                 style: TextStyle(
                   fontSize: 28,
@@ -147,7 +145,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   const Text("Already have an account? "),
                   GestureDetector(
                     onTap: () => Get.back(),
-                    child: const Text(
+                    child: Text(
                       'Login',
                       style: TextStyle(
                         color: AppColors.primary,

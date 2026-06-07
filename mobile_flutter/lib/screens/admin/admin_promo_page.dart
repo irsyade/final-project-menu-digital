@@ -1,10 +1,12 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:lucide_icons/lucide_icons.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:mobile_flutter/constants.dart';
 import 'package:mobile_flutter/controllers/promo_controller.dart';
 import 'package:intl/intl.dart';
 import 'package:mobile_flutter/models/promo.dart';
+import 'package:image_picker/image_picker.dart';
 
 class AdminPromoPage extends StatefulWidget {
   const AdminPromoPage({super.key});
@@ -16,6 +18,13 @@ class AdminPromoPage extends StatefulWidget {
 class _AdminPromoPageState extends State<AdminPromoPage> {
   final PromoController controller = Get.find<PromoController>();
   String _selectedFilter = 'Semua';
+  bool _showPromoAlert = true;
+
+  @override
+  void initState() {
+    super.initState();
+    controller.fetchPromos();
+  }
 
   String _formatCurrency(dynamic value) {
     return NumberFormat.currency(locale: 'id_ID', symbol: 'Rp ', decimalDigits: 0).format(value);
@@ -37,41 +46,47 @@ class _AdminPromoPageState extends State<AdminPromoPage> {
             children: [
               _buildHeader(),
               Expanded(
-                child: Obx(() {
-                  if (controller.isLoading.value) {
-                    return const Center(child: CircularProgressIndicator());
-                  }
+                child: RefreshIndicator(
+                  onRefresh: () async {
+                    await controller.fetchPromos();
+                  },
+                  child: Obx(() {
+                    if (controller.isLoading.value) {
+                      return const Center(child: CircularProgressIndicator());
+                    }
 
-                  var filteredPromos = controller.promos.where((p) {
-                    if (_selectedFilter == 'Semua') return true;
-                    if (_selectedFilter == 'Aktif') return p.isActive;
-                    if (_selectedFilter == 'Nonaktif') return !p.isActive;
-                    if (_selectedFilter == 'Terjadwal') return p.startDate != null && p.startDate!.isAfter(DateTime.now());
-                    if (_selectedFilter == 'Kadaluarsa') return p.endDate != null && p.endDate!.isBefore(DateTime.now());
-                    return true;
-                  }).toList();
+                    var filteredPromos = controller.promos.where((p) {
+                      if (_selectedFilter == 'Semua') return true;
+                      if (_selectedFilter == 'Aktif') return p.isActive;
+                      if (_selectedFilter == 'Nonaktif') return !p.isActive;
+                      if (_selectedFilter == 'Terjadwal') return p.startDate != null && p.startDate!.isAfter(DateTime.now());
+                      if (_selectedFilter == 'Kadaluarsa') return p.endDate != null && p.endDate!.isBefore(DateTime.now());
+                      return true;
+                    }).toList();
 
-                  return SingleChildScrollView(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _buildBannerSection(),
-                        _buildPromoAlert(),
-                        _buildFilters(),
-                        if (filteredPromos.isEmpty)
-                          const Center(child: Padding(padding: EdgeInsets.all(40), child: Text('Tidak ada promo.', style: TextStyle(color: AppColors.slate400, fontWeight: FontWeight.bold))))
-                        else
-                          ListView.builder(
-                            shrinkWrap: true,
-                            physics: const NeverScrollableScrollPhysics(),
-                            padding: const EdgeInsets.fromLTRB(24, 0, 24, 100),
-                            itemCount: filteredPromos.length,
-                            itemBuilder: (context, index) => _buildPromoCard(filteredPromos[index]),
-                          ),
-                      ],
-                    ),
-                  );
-                }),
+                    return SingleChildScrollView(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _buildBannerSection(),
+                          _buildPromoAlert(),
+                          _buildFilters(),
+                          if (filteredPromos.isEmpty)
+                            const Center(child: Padding(padding: EdgeInsets.all(40), child: Text('Tidak ada promo.', style: TextStyle(color: AppColors.slate400, fontWeight: FontWeight.bold))))
+                          else
+                            ListView.builder(
+                              shrinkWrap: true,
+                              physics: const NeverScrollableScrollPhysics(),
+                              padding: const EdgeInsets.fromLTRB(24, 0, 24, 100),
+                              itemCount: filteredPromos.length,
+                              itemBuilder: (context, index) => _buildPromoCard(filteredPromos[index]),
+                            ),
+                        ],
+                      ),
+                    );
+                  }),
+                ),
               ),
             ],
           ),
@@ -89,7 +104,7 @@ class _AdminPromoPageState extends State<AdminPromoPage> {
           const Text('Promo & Jadwal', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: AppColors.slate900)),
           IconButton(
             onPressed: () => _showAddPromoDialog(context),
-            icon: const Icon(LucideIcons.plus, color: AppColors.primary, size: 24),
+            icon: Icon(LucideIcons.plus, color: AppColors.primary, size: 24),
           ),
         ],
       ),
@@ -139,6 +154,7 @@ class _AdminPromoPageState extends State<AdminPromoPage> {
   }
 
   Widget _buildPromoAlert() {
+    if (!_showPromoAlert) return const SizedBox.shrink();
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
@@ -148,7 +164,16 @@ class _AdminPromoPageState extends State<AdminPromoPage> {
           const Icon(LucideIcons.info, size: 14, color: AppColors.slate400),
           const SizedBox(width: 8),
           const Expanded(child: Text('Promo kadaluarsa dihapus otomatis oleh sistem', style: TextStyle(fontSize: 10, color: AppColors.slate400, fontWeight: FontWeight.bold))),
-          IconButton(onPressed: () {}, icon: const Icon(LucideIcons.x, size: 14, color: AppColors.slate400), constraints: const BoxConstraints(), padding: EdgeInsets.zero),
+          IconButton(
+            onPressed: () {
+              setState(() {
+                _showPromoAlert = false;
+              });
+            },
+            icon: const Icon(LucideIcons.x, size: 14, color: AppColors.slate400),
+            constraints: const BoxConstraints(),
+            padding: EdgeInsets.zero,
+          ),
         ],
       ),
     );
@@ -183,7 +208,6 @@ class _AdminPromoPageState extends State<AdminPromoPage> {
   Widget _buildPromoCard(Promo promo) {
     Color typeColor = Colors.orange;
     if (promo.promoType == 'bundling') typeColor = Colors.blue;
-    if (promo.promoType == 'free_item') typeColor = Colors.green;
 
     bool isExpired = promo.endDate != null && promo.endDate!.isBefore(DateTime.now());
 
@@ -211,7 +235,7 @@ class _AdminPromoPageState extends State<AdminPromoPage> {
             children: [
               Text(promo.promoType.capitalizeFirst!, style: TextStyle(color: typeColor, fontSize: 11, fontWeight: FontWeight.bold)),
               const SizedBox(width: 8),
-              Text(promo.type == 'percentage' ? '${promo.value.toInt()}%' : _formatCurrency(promo.value), style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 13, color: AppColors.primary)),
+              Text(promo.type == 'percentage' ? '${promo.value.toInt()}%' : _formatCurrency(promo.value), style: TextStyle(fontWeight: FontWeight.w900, fontSize: 13, color: AppColors.primary)),
             ],
           ),
           const SizedBox(height: 8),
@@ -256,6 +280,8 @@ class _AdminPromoPageState extends State<AdminPromoPage> {
   void _showAddPromoDialog(BuildContext context, {Promo? promo}) {
     final nameController = TextEditingController(text: promo?.name ?? "");
     final descController = TextEditingController(text: promo?.description ?? "");
+    final codeController = TextEditingController(text: promo?.code ?? "");
+    final quotaController = TextEditingController(text: promo?.quota?.toString() ?? "");
     final valueController = TextEditingController(text: promo?.value?.toString() ?? "");
     final minPurchaseController = TextEditingController(text: promo?.minPurchase?.toString() ?? "");
     final bundlingItemsController = TextEditingController(text: promo?.bundlingItems ?? "");
@@ -265,6 +291,7 @@ class _AdminPromoPageState extends State<AdminPromoPage> {
     var discountType = (promo?.type ?? 'percentage').obs; // percentage or fixed
     var startDate = (promo?.startDate ?? DateTime.now()).obs;
     var endDate = (promo?.endDate ?? DateTime.now().add(const Duration(days: 30))).obs;
+    final pickedImagePath = RxnString(null);
 
     Get.bottomSheet(
       Container(
@@ -283,13 +310,69 @@ class _AdminPromoPageState extends State<AdminPromoPage> {
                 ],
               ),
               const SizedBox(height: 24),
-              _buildUploadPlaceholder(),
+              _buildLabel('Foto Iklan Promo (opsional)'),
+              GestureDetector(
+                onTap: () async {
+                  final ImagePicker picker = ImagePicker();
+                  final XFile? image = await picker.pickImage(source: ImageSource.gallery);
+                  if (image != null) {
+                    pickedImagePath.value = image.path;
+                  }
+                },
+                child: Obx(() {
+                  final path = pickedImagePath.value;
+                  final hasExistingImage = promo != null && promo.image != null;
+
+                  if (path != null) {
+                    return ClipRRect(
+                      borderRadius: BorderRadius.circular(16),
+                      child: Image.file(
+                        File(path),
+                        height: 160,
+                        width: double.infinity,
+                        fit: BoxFit.cover,
+                      ),
+                    );
+                  } else if (hasExistingImage) {
+                    return ClipRRect(
+                      borderRadius: BorderRadius.circular(16),
+                      child: Image.network(
+                        promo.image!,
+                        height: 160,
+                        width: double.infinity,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) => const Icon(LucideIcons.image, size: 32, color: AppColors.slate300),
+                      ),
+                    );
+                  }
+
+                  return Container(
+                    width: double.infinity, height: 160,
+                    decoration: BoxDecoration(color: AppColors.slate50, borderRadius: BorderRadius.circular(20), border: Border.all(color: AppColors.slate100)),
+                    child: const Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(LucideIcons.uploadCloud, color: AppColors.slate300, size: 32),
+                        SizedBox(height: 12),
+                        Text('Upload Iklan Promo', style: TextStyle(color: AppColors.slate300, fontSize: 13, fontWeight: FontWeight.bold)),
+                        Text('(JPG, PNG, Maks. 10MB)', style: TextStyle(color: AppColors.slate200, fontSize: 9, fontWeight: FontWeight.bold)),
+                      ],
+                    ),
+                  );
+                }),
+              ),
               const SizedBox(height: 24),
               _buildLabel('Nama Promo *'),
               _buildTextField(nameController, 'Nama promo'),
               const SizedBox(height: 20),
+              _buildLabel('Kode / Barcode Promo *'),
+              _buildTextField(codeController, 'Contoh: PROMO100'),
+              const SizedBox(height: 20),
               _buildLabel('Deskripsi'),
               _buildTextField(descController, 'Deskripsi promo', maxLines: 2),
+              const SizedBox(height: 20),
+              _buildLabel('Kuota Promo (opsional)'),
+              _buildTextField(quotaController, 'Contoh: 100', isNumber: true),
               const SizedBox(height: 24),
               _buildLabel('Tipe Promo'),
               Obx(() => Row(
@@ -297,8 +380,6 @@ class _AdminPromoPageState extends State<AdminPromoPage> {
                   _buildTypeButton('Diskon', 'diskon', promoType.value == 'diskon', () => promoType.value = 'diskon', LucideIcons.percent, Colors.orange),
                   const SizedBox(width: 8),
                   _buildTypeButton('Bundling', 'bundling', promoType.value == 'bundling', () => promoType.value = 'bundling', LucideIcons.package, Colors.blue),
-                  const SizedBox(width: 8),
-                  _buildTypeButton('Free Item', 'free_item', promoType.value == 'free_item', () => promoType.value = 'free_item', LucideIcons.gift, Colors.green),
                 ],
               )),
               const SizedBox(height: 24),
@@ -321,22 +402,46 @@ class _AdminPromoPageState extends State<AdminPromoPage> {
               const SizedBox(height: 32),
               ElevatedButton(
                 onPressed: () async {
+                  // Validate required fields before sending
+                  if (nameController.text.trim().isEmpty) {
+                    Get.snackbar("Peringatan", "Nama promo wajib diisi", backgroundColor: Colors.orange, colorText: Colors.white);
+                    return;
+                  }
+                  if (codeController.text.trim().isEmpty) {
+                    Get.snackbar("Peringatan", "Kode promo wajib diisi", backgroundColor: Colors.orange, colorText: Colors.white);
+                    return;
+                  }
+                  // Validate value for diskon and bundling types
+                  if (valueController.text.trim().isEmpty) {
+                    Get.snackbar("Peringatan", "Nilai promo wajib diisi", backgroundColor: Colors.orange, colorText: Colors.white);
+                    return;
+                  }
+                  // Validate bundling items for bundling type
+                  if (promoType.value == 'bundling' && bundlingItemsController.text.trim().isEmpty) {
+                    Get.snackbar("Peringatan", "Isi bundling wajib diisi", backgroundColor: Colors.orange, colorText: Colors.white);
+                    return;
+                  }
+
                   final data = {
-                    "name": nameController.text,
-                    "description": descController.text,
+                    "name": nameController.text.trim(),
+                    "code": codeController.text.trim().toUpperCase(),
+                    "description": descController.text.trim(),
                     "promo_type": promoType.value,
                     "type": discountType.value,
                     "value": double.tryParse(valueController.text) ?? 0,
                     "min_purchase": double.tryParse(minPurchaseController.text) ?? 0,
-                    "bundling_items": bundlingItemsController.text,
-                    "free_item_name": freeItemNameController.text,
+                    "bundling_items": bundlingItemsController.text.trim(),
                     "start_date": startDate.value.toIso8601String(),
                     "end_date": endDate.value.toIso8601String(),
                     "is_active": promo?.isActive ?? true,
                     "is_banner": promo?.isBanner ?? false,
+                    if (quotaController.text.trim().isNotEmpty)
+                      "quota": int.tryParse(quotaController.text.trim()),
                   };
                   
-                  final result = promo == null ? await controller.createPromo(data) : await controller.updatePromo(promo.id, data);
+                  final result = promo == null 
+                      ? await controller.createPromo(data, imagePath: pickedImagePath.value) 
+                      : await controller.updatePromo(promo.id, data, imagePath: pickedImagePath.value);
                   if (result['success']) {
                     Get.back();
                     Get.snackbar("Sukses", "Promo berhasil disimpan", backgroundColor: AppColors.success, colorText: Colors.white);
@@ -407,7 +512,8 @@ class _AdminPromoPageState extends State<AdminPromoPage> {
           ],
         ),
       );
-    } else if (promoType == 'bundling') {
+    } else {
+      // bundling type
       return Container(
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(color: Colors.blue.withOpacity(0.05), borderRadius: BorderRadius.circular(20), border: Border.all(color: Colors.blue.withOpacity(0.1))),
@@ -421,23 +527,6 @@ class _AdminPromoPageState extends State<AdminPromoPage> {
             const SizedBox(height: 20),
             _buildLabel('Harga Bundling *'),
             _buildTextField(valueController, 'Rp 0', isNumber: true),
-          ],
-        ),
-      );
-    } else {
-      return Container(
-        padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(color: Colors.green.withOpacity(0.05), borderRadius: BorderRadius.circular(20), border: Border.all(color: Colors.green.withOpacity(0.1))),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text('Detail Free Item', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 12, color: Colors.green)),
-            const SizedBox(height: 16),
-            _buildLabel('Item Gratis *'),
-            _buildTextField(freeItemController, 'Contoh: Es Teh Manis'),
-            const SizedBox(height: 20),
-            _buildLabel('Min. Pembelian'),
-            _buildTextField(minPurchaseController, 'Rp 0', isNumber: true),
           ],
         ),
       );

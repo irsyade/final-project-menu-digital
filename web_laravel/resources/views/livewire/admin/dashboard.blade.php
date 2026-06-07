@@ -182,12 +182,16 @@
     let salesChart = null;
 
     // Initial chart data from Livewire component
-    const initialLabels = @json($labels);
-    const initialValues = @json($salesValues);
+    const initialLabels = @json($labels ?? []);
+    const initialValues = @json($salesValues ?? []);
 
     function initChart(labels, values) {
         const canvas = document.getElementById('salesChart');
         if (!canvas) return;
+
+        // Safety: ensure valid arrays
+        labels = labels || [];
+        values = values || [];
 
         if (salesChart) {
             salesChart.destroy();
@@ -263,10 +267,15 @@
         lucide.createIcons();
     });
 
-    // Listen for Livewire chart update event
+    // Listen for Livewire chart update event (Livewire v3 named params)
     document.addEventListener('livewire:init', function () {
         Livewire.on('chartUpdated', function (data) {
-            initChart(data[0].labels, data[0].salesValues);
+            // Livewire v3: named params arrive as data = { labels: [...], values: [...] }
+            // or sometimes as data = [{ labels: [...], values: [...] }]
+            let chartData = Array.isArray(data) ? data[0] : data;
+            let labels = chartData?.labels || [];
+            let values = chartData?.values || chartData?.salesValues || [];
+            initChart(labels, values);
             lucide.createIcons();
         });
     });

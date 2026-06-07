@@ -1,17 +1,22 @@
-import 'dart:convert';
+import 'dart:async';
 import 'package:get/get.dart';
 import 'package:mobile_flutter/models/category.dart';
 import 'package:mobile_flutter/models/product.dart';
-import 'package:mobile_flutter/services/api_service.dart';
+import 'package:mobile_flutter/services/product_service.dart';
+import 'package:mobile_flutter/utils/debounce.dart';
 
 class ProductController extends GetxController {
-  final ApiService _apiService = ApiService();
+  final ProductService _productService = ProductService();
 
   var isLoading = false.obs;
+  var isSearching = false.obs; // separate flag so grid can show search shimmer
   var categories = <Category>[].obs;
   var products = <Product>[].obs;
   var popularProducts = <Product>[].obs;
   var selectedCategory = 0.obs;
+
+  // Debounce for search — 400ms delay
+  final _searchDebounce = Debounce(const Duration(milliseconds: 400));
 
   @override
   void onInit() {
@@ -21,13 +26,15 @@ class ProductController extends GetxController {
     fetchProducts();
   }
 
+  @override
+  void onClose() {
+    _searchDebounce.dispose();
+    super.onClose();
+  }
+
   Future<void> fetchCategories() async {
     try {
-      final response = await _apiService.get('/categories');
-      if (response.statusCode == 200) {
-        final List data = jsonDecode(response.body);
-        categories.value = data.map((e) => Category.fromJson(e)).toList();
-      }
+      categories.value = await _productService.getCategories();
     } catch (e) {
       print("Error fetching categories: $e");
     }
@@ -36,22 +43,7 @@ class ProductController extends GetxController {
   Future<void> fetchProducts({int? categoryId, String? query}) async {
     isLoading(true);
     try {
-      String endpoint = '/products';
-      if (query != null && query.isNotEmpty) {
-        endpoint += '/search?q=$query';
-      } else if (categoryId != null && categoryId != 0) {
-        endpoint += '?category_id=$categoryId';
-      }
-      
-      final response = await _apiService.get(endpoint);
-      if (response.statusCode == 200) {
-        final dynamic decoded = jsonDecode(response.body);
-        if (decoded is List) {
-          products.value = decoded.map((e) => Product.fromJson(e)).toList();
-        } else {
-          print("Warning: /products returned non-list data: $decoded");
-        }
-      }
+      products.value = await _productService.getProducts(categoryId: categoryId, query: query);
     } catch (e) {
       print("Error fetching products: $e");
     } finally {
@@ -59,13 +51,23 @@ class ProductController extends GetxController {
     }
   }
 
+  /// Debounced search — call this from TextField onChanged.
+  /// Shows [isSearching] immediately so the UI can react,
+  /// then waits 400ms before hitting the API.
+  void searchProductsDebounced(String query) {
+    isSearching(true);
+    _searchDebounce.run(() async {
+      await fetchProducts(
+        categoryId: selectedCategory.value == 0 ? null : selectedCategory.value,
+        query: query.trim().isEmpty ? null : query.trim(),
+      );
+      isSearching(false);
+    });
+  }
+
   Future<void> fetchPopularProducts() async {
     try {
-      final response = await _apiService.get('/products/popular');
-      if (response.statusCode == 200) {
-        final List data = jsonDecode(response.body);
-        popularProducts.value = data.map((e) => Product.fromJson(e)).toList();
-      }
+      popularProducts.value = await _productService.getPopularProducts();
     } catch (e) {
       print("Error fetching popular products: $e");
     }
@@ -77,16 +79,14 @@ class ProductController extends GetxController {
   }
 
   // === PRODUCT CRUD ===
-  Future<Map<String, dynamic>> createProduct(Map<String, dynamic> data) async {
+  Future<Map<String, dynamic>> createProduct(Map<String, dynamic> data, {String? imagePath}) async {
     isLoading(true);
     try {
-      final response = await _apiService.post('/products', data);
-      if (response.statusCode == 200 || response.statusCode == 201) {
+      final result = await _productService.createProduct(data, imagePath: imagePath);
+      if (result['success'] == true) {
         fetchProducts();
-        return {"success": true};
       }
-      final errorData = jsonDecode(response.body);
-      return {"success": false, "message": errorData['message'] ?? "Gagal menambah produk"};
+      return result;
     } catch (e) {
       return {"success": false, "message": "Terjadi kesalahan: $e"};
     } finally {
@@ -94,16 +94,14 @@ class ProductController extends GetxController {
     }
   }
 
-  Future<Map<String, dynamic>> updateProduct(int id, Map<String, dynamic> data) async {
+  Future<Map<String, dynamic>> updateProduct(int id, Map<String, dynamic> data, {String? imagePath}) async {
     isLoading(true);
     try {
-      final response = await _apiService.put('/products/$id', data);
-      if (response.statusCode == 200) {
+      final result = await _productService.updateProduct(id, data, imagePath: imagePath);
+      if (result['success'] == true) {
         fetchProducts();
-        return {"success": true};
       }
-      final errorData = jsonDecode(response.body);
-      return {"success": false, "message": errorData['message'] ?? "Gagal memperbarui produk"};
+      return result;
     } catch (e) {
       return {"success": false, "message": "Terjadi kesalahan: $e"};
     } finally {
@@ -111,43 +109,69 @@ class ProductController extends GetxController {
     }
   }
 
-  Future<bool> deleteProduct(int id) async {
+  Future<Map<String, dynamic>> deleteProduct(int id) async {
     isLoading(true);
     try {
-      final response = await _apiService.delete('/products/$id');
-      if (response.statusCode == 200) {
+      final result = await _productService.deleteProduct(id);
+      if (result['success'] == true) {
         fetchProducts();
-        return true;
       }
-      return false;
+      return result;
     } catch (e) {
       print("Error deleting product: $e");
-      return false;
+      return {"success": false, "message": "Terjadi kesalahan: $e"};
     } finally {
       isLoading(false);
     }
   }
 
   Future<void> toggleProductAvailability(int id) async {
+    // Optimistic UI Update: Find product in local list and toggle isAvailable
+    final index = products.indexWhere((p) => p.id == id);
+    if (index == -1) return;
+
+    final originalProduct = products[index];
+    final updatedProduct = Product(
+      id: originalProduct.id,
+      categoryId: originalProduct.categoryId,
+      name: originalProduct.name,
+      description: originalProduct.description,
+      price: originalProduct.price,
+      image: originalProduct.image,
+      isPopular: originalProduct.isPopular,
+      isAvailable: !originalProduct.isAvailable,
+      categoryName: originalProduct.categoryName,
+      tags: originalProduct.tags,
+    );
+
+    // Apply change immediately
+    products[index] = updatedProduct;
+    products.refresh();
+
     try {
-      final response = await _apiService.post('/products/$id/toggle', {});
-      if (response.statusCode == 200) {
+      final success = await _productService.toggleProductAvailability(id);
+      if (!success) {
+        // Revert if API failed
+        products[index] = originalProduct;
+        products.refresh();
+      } else {
+        // Sync with database asynchronously
         fetchProducts();
       }
     } catch (e) {
       print("Error toggling product: $e");
+      // Revert if exception occurred
+      products[index] = originalProduct;
+      products.refresh();
     }
   }
 
   // === CATEGORY CRUD ===
   Future<bool> createCategory(Map<String, dynamic> data) async {
     try {
-      final response = await _apiService.post('/categories', data);
-      if (response.statusCode == 200 || response.statusCode == 201) {
-        fetchCategories();
-        return true;
-      }
-      return false;
+      final success = await _productService.createCategory(data);
+      if (success) fetchCategories();
+      return success;
     } catch (e) {
       print("Error creating category: $e");
       return false;
@@ -156,12 +180,9 @@ class ProductController extends GetxController {
 
   Future<bool> updateCategory(int id, Map<String, dynamic> data) async {
     try {
-      final response = await _apiService.put('/categories/$id', data);
-      if (response.statusCode == 200) {
-        fetchCategories();
-        return true;
-      }
-      return false;
+      final success = await _productService.updateCategory(id, data);
+      if (success) fetchCategories();
+      return success;
     } catch (e) {
       print("Error updating category: $e");
       return false;
@@ -170,12 +191,9 @@ class ProductController extends GetxController {
 
   Future<bool> deleteCategory(int id) async {
     try {
-      final response = await _apiService.delete('/categories/$id');
-      if (response.statusCode == 200) {
-        fetchCategories();
-        return true;
-      }
-      return false;
+      final success = await _productService.deleteCategory(id);
+      if (success) fetchCategories();
+      return success;
     } catch (e) {
       print("Error deleting category: $e");
       return false;

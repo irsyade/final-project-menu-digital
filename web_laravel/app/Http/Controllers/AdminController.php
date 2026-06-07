@@ -77,7 +77,10 @@ class AdminController extends Controller
             ->get();
 
         if (request()->expectsJson()) {
+            $setting = \App\Models\Setting::first();
             return response()->json([
+                'user' => auth()->user(),
+                'store_name' => $setting?->site_name ?? 'MenuKu',
                 'stats' => $stats,
                 'labels' => $labels,
                 'salesValues' => $salesValues,
