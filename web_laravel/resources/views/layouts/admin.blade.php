@@ -138,7 +138,7 @@
 
             <!-- Content Area -->
             <div class="flex-1 overflow-hidden bg-[#F7F6F3] flex flex-col">
-                <div class="flex-1 overflow-hidden p-0 sm:p-4 lg:p-8 flex flex-col">
+                <div class="flex-1 overflow-hidden p-4 lg:p-8 flex flex-col">
                     @if(session('success'))
                         <div class="mb-8 p-4 bg-emerald-50 border border-emerald-100 text-emerald-700 rounded-2xl flex items-center gap-3 shadow-sm animate-in fade-in slide-in-from-top-4 duration-500 shrink-0">
                             <i data-lucide="check-circle" class="w-5 h-5"></i>

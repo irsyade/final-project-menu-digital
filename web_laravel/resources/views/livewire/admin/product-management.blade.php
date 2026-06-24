@@ -9,39 +9,40 @@
 
     {{-- Header Row --}}
     <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-6 mb-8 shrink-0">
-        <div class="flex flex-col md:flex-row md:items-center gap-4">
-            {{-- Add Button --}}
-            <button
-                wire:click="openAdd()"
-                class="px-6 py-4 bg-brand text-white rounded-2xl font-black text-sm transition shadow-xl shadow-brand/20 hover:-translate-y-1 active:scale-95 flex items-center gap-2">
-                <i data-lucide="plus" class="w-5 h-5"></i>
-                <span>TAMBAH MENU</span>
-            </button>
+        {{-- Add Button --}}
+        <button
+            wire:click="openAdd()"
+            class="w-full lg:w-auto px-6 py-4 bg-brand text-white rounded-2xl font-black text-sm transition shadow-xl shadow-brand/20 hover:-translate-y-1 active:scale-95 flex items-center justify-center gap-2">
+            <i data-lucide="plus" class="w-5 h-5"></i>
+            <span>TAMBAH MENU</span>
+        </button>
 
-            {{-- View Mode Toggle --}}
-            <div class="flex p-1 bg-white border border-slate-200 rounded-xl shadow-sm">
-                <button
-                    wire:click="$set('viewMode', 'grid')"
-                    class="p-2.5 rounded-lg transition {{ $viewMode === 'grid' ? 'bg-slate-100 text-slate-900' : 'text-slate-400 hover:text-brand' }}">
-                    <i data-lucide="layout-grid" class="w-5 h-5"></i>
-                </button>
-                <button
-                    wire:click="$set('viewMode', 'list')"
-                    class="p-2.5 rounded-lg transition {{ $viewMode === 'list' ? 'bg-slate-100 text-slate-900' : 'text-slate-400 hover:text-brand' }}">
-                    <i data-lucide="list" class="w-5 h-5"></i>
-                </button>
-            </div>
-        </div>
+        <div class="flex flex-wrap items-center gap-4 w-full lg:w-auto">
+            {{-- Search & View Toggle Group --}}
+            <div class="flex items-center gap-3 w-full sm:w-auto flex-1 sm:flex-initial">
+                {{-- Search --}}
+                <div class="relative group flex-1 sm:flex-initial">
+                    <input
+                        type="text"
+                        wire:model.live="search"
+                        placeholder="Cari menu..."
+                        class="w-full sm:w-64 pl-12 pr-6 py-3.5 bg-white border border-slate-200 rounded-2xl focus:ring-2 focus:ring-brand focus:border-brand transition outline-none text-sm font-medium shadow-sm">
+                    <i data-lucide="search" class="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 group-focus-within:text-brand transition"></i>
+                </div>
 
-        <div class="flex flex-wrap items-center gap-4">
-            {{-- Search --}}
-            <div class="relative group">
-                <input
-                    type="text"
-                    wire:model.live="search"
-                    placeholder="Cari menu..."
-                    class="w-full md:w-64 pl-12 pr-6 py-3.5 bg-white border border-slate-200 rounded-2xl focus:ring-2 focus:ring-brand focus:border-brand transition outline-none text-sm font-medium shadow-sm">
-                <i data-lucide="search" class="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 group-focus-within:text-brand transition"></i>
+                {{-- View Mode Toggle --}}
+                <div class="flex p-1 bg-white border border-slate-200 rounded-xl shadow-sm shrink-0">
+                    <button
+                        wire:click="$set('viewMode', 'grid')"
+                        class="p-2 rounded-lg transition {{ $viewMode === 'grid' ? 'bg-slate-100 text-slate-900' : 'text-slate-400 hover:text-brand' }}">
+                        <i data-lucide="layout-grid" class="w-5 h-5"></i>
+                    </button>
+                    <button
+                        wire:click="$set('viewMode', 'list')"
+                        class="p-2 rounded-lg transition {{ $viewMode === 'list' ? 'bg-slate-100 text-slate-900' : 'text-slate-400 hover:text-brand' }}">
+                        <i data-lucide="list" class="w-5 h-5"></i>
+                    </button>
+                </div>
             </div>
 
             {{-- Category Filter --}}
@@ -182,76 +183,78 @@
         {{-- LIST VIEW --}}
         @else
         <div class="bg-white rounded-[2.5rem] border border-slate-200 shadow-sm overflow-hidden">
-            <table class="w-full text-left">
-                <thead>
-                    <tr class="bg-slate-50/50">
-                        <th class="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Produk</th>
-                        <th class="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Kategori</th>
-                        <th class="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Harga</th>
-                        <th class="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Status</th>
-                        <th class="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Aksi</th>
-                    </tr>
-                </thead>
-                <tbody class="divide-y divide-slate-100">
-                    @forelse($products as $product)
-                    <tr class="hover:bg-slate-50/30 transition">
-                        <td class="px-8 py-5">
-                            <div class="flex items-center gap-4">
-                                <div class="w-14 h-14 rounded-2xl overflow-hidden shrink-0 {{ !$product->is_available ? 'grayscale' : '' }}">
-                                    <img src="{{ $product->image ? (str_starts_with($product->image, 'http') ? $product->image : asset('storage/' . $product->image)) : 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=100' }}"
-                                        class="w-full h-full object-cover" alt="{{ $product->name }}">
-                                </div>
-                                <div>
-                                    <p class="font-black text-sm text-slate-900">{{ $product->name }}</p>
-                                    @if($product->tags && count($product->tags) > 0)
-                                    <div class="flex flex-wrap gap-1 mt-1">
-                                        @foreach(array_slice($product->tags, 0, 2) as $tag)
-                                        <span class="px-1.5 py-0.5 bg-slate-100 text-slate-400 text-[8px] font-bold rounded">{{ $tag }}</span>
-                                        @endforeach
+            <div class="overflow-x-auto w-full custom-scrollbar">
+                <table class="w-full text-left min-w-[700px] md:min-w-full">
+                    <thead>
+                        <tr class="bg-slate-50/50">
+                            <th class="px-4 sm:px-8 py-4 sm:py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Produk</th>
+                            <th class="px-4 sm:px-8 py-4 sm:py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Kategori</th>
+                            <th class="px-4 sm:px-8 py-4 sm:py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Harga</th>
+                            <th class="px-4 sm:px-8 py-4 sm:py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Status</th>
+                            <th class="px-4 sm:px-8 py-4 sm:py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right whitespace-nowrap">Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100">
+                        @forelse($products as $product)
+                        <tr class="hover:bg-slate-50/30 transition">
+                            <td class="px-4 sm:px-8 py-4 sm:py-5">
+                                <div class="flex items-center gap-4">
+                                    <div class="w-14 h-14 rounded-2xl overflow-hidden shrink-0 {{ !$product->is_available ? 'grayscale' : '' }}">
+                                        <img src="{{ $product->image ? (str_starts_with($product->image, 'http') ? $product->image : asset('storage/' . $product->image)) : 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=100' }}"
+                                            class="w-full h-full object-cover" alt="{{ $product->name }}">
                                     </div>
-                                    @endif
+                                    <div>
+                                        <p class="font-black text-sm text-slate-900 whitespace-nowrap">{{ $product->name }}</p>
+                                        @if($product->tags && count($product->tags) > 0)
+                                        <div class="flex flex-wrap gap-1 mt-1">
+                                            @foreach(array_slice($product->tags, 0, 2) as $tag)
+                                            <span class="px-1.5 py-0.5 bg-slate-100 text-slate-400 text-[8px] font-bold rounded">{{ $tag }}</span>
+                                            @endforeach
+                                        </div>
+                                        @endif
+                                    </div>
                                 </div>
-                            </div>
-                        </td>
-                        <td class="px-8 py-5">
-                            <span class="px-3 py-1 bg-brand/5 text-brand text-[10px] font-black uppercase rounded-lg border border-brand/10">{{ $product->category?->name ?? '-' }}</span>
-                        </td>
-                        <td class="px-8 py-5">
-                            @if($product->discount_percentage > 0)
-                            <span class="text-[10px] text-slate-400 line-through block">Rp {{ number_format($product->price, 0, ',', '.') }}</span>
-                            @endif
-                            <span class="font-black text-brand">Rp {{ number_format($product->price * (1 - $product->discount_percentage / 100), 0, ',', '.') }}</span>
-                        </td>
-                        <td class="px-8 py-5">
-                            <label class="relative inline-flex items-center cursor-pointer">
-                                <input type="checkbox" class="sr-only peer" {{ $product->is_available ? 'checked' : '' }}
-                                    wire:click="toggleAvailability({{ $product->id }})">
-                                <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-500"></div>
-                            </label>
-                        </td>
-                        <td class="px-8 py-5 text-right">
-                            <div class="flex items-center justify-end gap-2">
-                                <button wire:click="openEdit({{ $product->id }})" class="p-2.5 bg-slate-50 text-slate-400 hover:text-blue-500 hover:bg-blue-50 rounded-xl transition border border-slate-100">
-                                    <i data-lucide="pencil" class="w-4 h-4"></i>
-                                </button>
-                                <button wire:click="delete({{ $product->id }})" onclick="return confirm('Hapus produk ini?')" class="p-2.5 bg-slate-50 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition border border-slate-100">
-                                    <i data-lucide="trash-2" class="w-4 h-4"></i>
-                                </button>
-                            </div>
-                        </td>
-                    </tr>
-                    @empty
-                    <tr>
-                        <td colspan="5" class="px-8 py-20 text-center">
-                            <div class="flex flex-col items-center text-slate-200">
-                                <i data-lucide="package-search" class="w-12 h-12 mb-3"></i>
-                                <p class="font-black uppercase tracking-widest text-[10px]">Tidak ada menu ditemukan</p>
-                            </div>
-                        </td>
-                    </tr>
-                    @endforelse
-                </tbody>
-            </table>
+                            </td>
+                            <td class="px-4 sm:px-8 py-4 sm:py-5 whitespace-nowrap">
+                                <span class="px-3 py-1 bg-brand/5 text-brand text-[10px] font-black uppercase rounded-lg border border-brand/10 whitespace-nowrap">{{ $product->category?->name ?? '-' }}</span>
+                            </td>
+                            <td class="px-4 sm:px-8 py-4 sm:py-5 whitespace-nowrap">
+                                @if($product->discount_percentage > 0)
+                                <span class="text-[10px] text-slate-400 line-through block leading-none mb-1">Rp {{ number_format($product->price, 0, ',', '.') }}</span>
+                                @endif
+                                <span class="font-black text-brand">Rp {{ number_format($product->price * (1 - $product->discount_percentage / 100), 0, ',', '.') }}</span>
+                            </td>
+                            <td class="px-4 sm:px-8 py-4 sm:py-5 whitespace-nowrap">
+                                <label class="relative inline-flex items-center cursor-pointer">
+                                    <input type="checkbox" class="sr-only peer" {{ $product->is_available ? 'checked' : '' }}
+                                        wire:click="toggleAvailability({{ $product->id }})">
+                                    <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-500"></div>
+                                </label>
+                            </td>
+                            <td class="px-4 sm:px-8 py-4 sm:py-5 text-right whitespace-nowrap">
+                                <div class="flex items-center justify-end gap-2">
+                                    <button wire:click="openEdit({{ $product->id }})" class="p-2.5 bg-slate-50 text-slate-400 hover:text-blue-500 hover:bg-blue-50 rounded-xl transition border border-slate-100">
+                                        <i data-lucide="pencil" class="w-4 h-4"></i>
+                                    </button>
+                                    <button wire:click="delete({{ $product->id }})" onclick="return confirm('Hapus produk ini?')" class="p-2.5 bg-slate-50 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition border border-slate-100">
+                                        <i data-lucide="trash-2" class="w-4 h-4"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        @empty
+                        <tr>
+                            <td colspan="5" class="px-4 sm:px-8 py-20 text-center">
+                                <div class="flex flex-col items-center text-slate-200">
+                                    <i data-lucide="package-search" class="w-12 h-12 mb-3"></i>
+                                    <p class="font-black uppercase tracking-widest text-[10px]">Tidak ada menu ditemukan</p>
+                                </div>
+                            </td>
+                        </tr>
+                        @endforelse
+                    </tbody>
+                </table>
+            </div>
         </div>
         @endif
     </div>
