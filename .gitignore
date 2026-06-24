@@ -21,6 +21,7 @@ web_laravel/storage/framework/testing/*
 web_laravel/storage/framework/views/*
 web_laravel/storage/logs/*
 web_laravel/bootstrap/cache/*
+web_laravel/public/download/app-release.apk
 
 # Flutter
 mobile_flutter/.dart_tool/
